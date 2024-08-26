@@ -9,6 +9,11 @@ set(PROJECT_NAME RBVMS)
 project(${PROJECT_NAME}
   LANGUAGES CXX C)
 
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/install")
+endif ()
+
+
 #-------------------------------------------------------------------------------
 # Get git submodules
 #-------------------------------------------------------------------------------
