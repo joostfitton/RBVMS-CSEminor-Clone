@@ -3,6 +3,7 @@ build/*
 debug/*
 dbg/*
 opt/*
+install/*
 
 # Prerequisites
 *.d
@@ -36,3 +37,9 @@ opt/*
 *.exe
 *.out
 *.app
+
+# Apptainer images
+*.sif
+*.sif/
+*.img
+*.img/
