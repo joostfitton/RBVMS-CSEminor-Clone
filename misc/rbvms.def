@@ -1,18 +1,12 @@
 Bootstrap: docker
-From: ubuntu:20.04
+From: ubuntu:24.04
 
 %setup
     touch ${APPTAINER_ROOTFS}/etc/localtime
-    mkdir ${APPTAINER_ROOTFS}/visit_install
 
 %files
-    visit-install3_3_2 /visit_install/
-    visit3_3_2.linux-x86_64-ubuntu20.tar.gz /visit_install/
-    wedge /wedge
-    wedge_test /wedge_test
-    
+
 %environment
-    export PATH=/usr/local/visit/bin:${PATH}
 
 %post
     # Update system
@@ -21,64 +15,26 @@ From: ubuntu:20.04
 
     # Install required packages
     apt-get install -y \
-        vim \
+        neovim \
         locales \
-        gmsh \
         git \
         cmake \
         build-essential \
         openmpi-common \
         libopenmpi-dev \
-        cpio \
-        qt5-default \
-        libxt6 \
-
+        libmetis5
     locale-gen en_US.UTF-8
 
-    # Install Hypre
+    # Install rbvms
     cd /
-    git clone https://github.com/hypre-space/hypre
-    cd hypre/src
-    ./configure
-    make -j 18 install
-    cd /
-
-    # Install Metis
-    cd /
-    git clone https://github.com/mfem/tpls
-    tar -zxvf tpls/metis-5.1.0.tar.gz
-    rm -r tpls
-    cd metis-5.1.0
-    make config
-    make -j 18 install
-    cd /
-
-    # Install MFEM
-    cd /
-    git clone https://github.com/mfem/mfem.git
-    cd mfem
-    mkdir build
-    cd build
-    cmake .. -DMFEM_USE_MPI=YES 
-    make -j 18 install
-    cd /
-
-    # Install Wedge
-    cd /
-    #git clone git@gitlab.tudelft.nl:idoakkerman/gslcl.git
-    cd wedge
-    git checkout wedge
+    git clone git@github.com:IdoAkkerman/rbvms.git
+    cd rbvms
     mkdir build
     cd build
     cmake ..
-    make -j 18 install
+    export NPROCS=`grep -c processor /proc/cpuinfo`
+    make -j $NPROCS install
     cd /
-
-    # Install VisIt
-    cd /visit_install
-    bash ./visit-install3_3_2 -c none 3.3.2 linux-x86_64-ubuntu20 /usr/local/visit
-    cd /
-    rm -rf /visit_install
 
 %runscript
 
@@ -89,10 +45,7 @@ From: ubuntu:20.04
     if [ $? -eq 0 ]; then
         echo "Container base is Ubuntu as expected."
         echo "Installed packages are:"
-        #apt list
-        which gmsh
-        which wedge
-        which visit
+        #which visit
     else
         echo "Container base is not Ubuntu."
         exit 1
@@ -103,4 +56,4 @@ From: ubuntu:20.04
     Version v1.0.0
 
 %help
-    This container is built to support numerical ship hydro @ TUDelft
+    This container is built to support RBVMS deployment @ TUDelft
