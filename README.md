@@ -17,20 +17,51 @@ Large eddy simulation of turbulent Taylor–Couette flow using isogeometric anal
 Journal of Computational Physics,
 Volume 229, Issue 9, 2010, Pages 3402-3414,ISSN 0021-9991,
 https://doi.org/10.1016/j.jcp.2010.01.008.
-[https://www.sciencedirect.com/science/article/pii/S0021999110000239][1]
 
 
 
 ## Install
 
-`sudo apt-get install cmake build-essential openmpi metis`
+To install RBVMS on a Ubuntu-based machine make sure the appropriate packages are installed.
+This can be done using the following command:
 
+`sudo apt-get install cmake git build-essential openmpi metis`
 
-<cd build
-cmake ..>
+The RBVMS code can be downloaded using the following command
+
+` git clone git@github.com:IdoAkkerman/rbvms.git`
+
+This will create a directory `rbvms` with the code in it. This code can be compiled using the following commands:
+
+`
+cd rbvms
+mkdir build
+cd build
+cmake ..
+make -j 16`
+
+Here the number 16 is the number of files that will be compiled concurrently.
+NB: This number you choose should depend on the number of cores you have available.
+
+Depending on the machine compilation might take a few minutes.
+After this hypre and MFEM will be installed in the `external` directory, and
+the rbvms executable can be found in the `bin` directory.
+
 
 ## Run
 
+`XXX/bin/rbvms `
+
 ### Isogeometric
 
+
+
+
 ### GMSH
+
+GMSH is an open-source mesher. On Ubuntu-based machine the package can be installed
+using the following command:
+
+`sudo apt-get install gmsh`
+
+
