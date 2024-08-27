@@ -25,7 +25,9 @@ https://doi.org/10.1016/j.jcp.2010.01.008.
 To install RBVMS on a Ubuntu-based machine make sure the appropriate packages are installed.
 This can be done using the following command:
 
-`sudo apt-get install cmake git build-essential openmpi metis`
+```
+sudo apt-get install cmake git build-essential openmpi metis
+```
 
 The RBVMS code can be downloaded using the following command
 
@@ -33,12 +35,13 @@ The RBVMS code can be downloaded using the following command
 
 This will create a directory `rbvms` with the code in it. This code can be compiled using the following commands:
 
-`
+```
 cd rbvms
 mkdir build
 cd build
 cmake ..
-make -j 16`
+make -j 16
+```
 
 Here the number 16 is the number of files that will be compiled concurrently.
 NB: This number you choose should depend on the number of cores you have available.
@@ -50,7 +53,9 @@ the rbvms executable can be found in the `bin` directory.
 
 ## Run
 
-`XXX/bin/rbvms `
+```
+XXX/bin/rbvms
+```
 
 ### Isogeometric
 
@@ -62,6 +67,8 @@ the rbvms executable can be found in the `bin` directory.
 GMSH is an open-source mesher. On Ubuntu-based machine the package can be installed
 using the following command:
 
-`sudo apt-get install gmsh`
+```
+sudo apt-get install gmsh
+```
 
 
