@@ -4,6 +4,7 @@ debug/*
 dbg/*
 opt/*
 install/*
+bin/*
 
 # Prerequisites
 *.d
