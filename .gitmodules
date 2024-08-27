@@ -1,6 +1,0 @@
-[submodule "hypre"]
-	path = hypre
-	url = git@github.com:hypre-space/hypre.git
-[submodule "mfem"]
-	path = mfem
-	url = git@github.com:mfem/mfem.git
