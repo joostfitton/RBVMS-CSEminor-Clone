@@ -24,6 +24,9 @@
 #include <fstream>
 #include <iostream>
 #include <list>
+#include <ctime>
+
+#include <unistd.h>       // Linux  -> #include <winsock.h>      //Windows
 
 using namespace std;
 using namespace mfem;
@@ -65,9 +68,39 @@ int main(int argc, char *argv[])
 
    if (Mpi::Root())
    {
+      // Build info
+      cout<<"------------------------------------\n";
+      cout<<"Compile time info";
       cout<< buildInfo.str() << endl;
 
-      cout<<"Number of MPI procs = "<<Mpi::WorldSize()<<endl;
+      // Run info
+      cout<<"------------------------------------\n";
+      cout<<"Run time info"<<endl;
+      cout<<"------------------------------------\n";
+      time_t     now = time(0);
+      struct tm  tstruct = *localtime(&now);
+      char       time[80], host[80];
+      strftime(time, sizeof(time), "%Y-%m-%d.%X", &tstruct);
+      gethostname(host,sizeof(host));
+
+      cout<<"Time: "<<time<<endl;
+      cout<<"Numer of MPI ranks "<<Mpi::WorldSize()<<endl;
+
+      cout<<"List  of hosts\n0: "<<host<<endl;
+      for (int i = 1; i < num_procs; i++)
+      {
+         MPI_Status status;
+         MPI_Recv (&host, sizeof(host), MPI_CHAR, i, 1, MPI_COMM_WORLD, &status);
+         cout<<i<<": "<<host<<endl;
+      }
+
+      cout<<"------------------------------------\n\n";
+   }
+   else
+   {
+       char host[80];
+       gethostname(host,sizeof(host));
+       MPI_Send (&host, sizeof(host), MPI_CHAR, 0, 1, MPI_COMM_WORLD);
    }
 
    // Parse command-line options.
