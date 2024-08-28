@@ -32,27 +32,31 @@ include_directories(${MFEM_INCLUDE_DIRS})
 #-------------------------------------------------------------------------------
 # Create header
 #-------------------------------------------------------------------------------
-add_custom_command(OUTPUT src/buildInfo.hpp
-                   PRE_BUILD
-                   COMMAND /bin/sh "${PROJECT_SOURCE_DIR}/config/buildInfo.sh" "${PROJECT_SOURCE_DIR}" "${EXT_DIR}"
-                   COMMENT "Getting git info")
+get_filename_component(tmp1 ${MFEM_DIR} REALPATH)
+get_filename_component(tmp2 ${PROJECT_BINARY_DIR}/.. REALPATH)
+
+if (${tmp1} STREQUAL ${tmp2})
+  message(STATUS "Report RBVMS, MFEM and hypre in build info.")
+  add_custom_command(OUTPUT buildInfo.hpp
+                     PRE_BUILD
+                     COMMAND /bin/bash "${PROJECT_SOURCE_DIR}/../config/buildInfo.sh" "${PROJECT_SOURCE_DIR}" "mfem" "hypre"
+                     COMMENT "Getting git info")
+else()
+  message(STATUS "External MFEM and hypre libraries used.")
+  message(STATUS "Only report RBVMS in build info.")
+  add_custom_command(OUTPUT buildInfo.hpp
+                     PRE_BUILD
+                     COMMAND /bin/bash "${PROJECT_SOURCE_DIR}/../config/buildInfo.sh" "${PROJECT_SOURCE_DIR}"
+                     COMMENT "Getting git info")
+endif()
 
 #-------------------------------------------------------------------------------
 # Build executable
 #-------------------------------------------------------------------------------
 add_executable(rbvms rbvms.cpp
-               monitor.cpp tau.cpp weakform.cpp
-               monitor.hpp tau.hpp weakform.hpp)
+               monitor.cpp tau.cpp weakform.cpp 
+               monitor.hpp tau.hpp weakform.hpp buildInfo.hpp)
 
 target_link_libraries(rbvms PRIVATE ${MFEM_LIBRARIES})
 install(TARGETS rbvms DESTINATION bin)
-
-#-------------------------------------------------------------------------------
-# Add tests
-#-------------------------------------------------------------------------------
-#add_test(NAME navsto_np=4
-#         COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${RBVMS_MPI_NP}
-#         ${MPIEXEC_PREFLAGS} $<TARGET_FILE:navsto> -no-vis
-#         ${MPIEXEC_POSTFLAGS}
-#        -m ${PROJECT_SOURCE_DIR}/data/square-nurbs.mesh -r 1 -o 2)
 

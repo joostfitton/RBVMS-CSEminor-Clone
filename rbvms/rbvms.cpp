@@ -11,6 +11,12 @@
 //
 // Stabilized  Navier-Stokes
 
+#if __has_include("buildInfo.hpp")
+   #include "buildInfo.hpp"
+#else
+   #include "noInfo.hpp"
+#endif
+
 #include "weakform.hpp"
 #include "monitor.hpp"
 #include "mfem.hpp"
@@ -56,6 +62,13 @@ int main(int argc, char *argv[])
    int num_procs = Mpi::WorldSize();
    int myid = Mpi::WorldRank();
    Hypre::Init();
+
+   if (Mpi::Root())
+   {
+      cout<< buildInfo.str() << endl;
+
+      cout<<"Number of MPI procs = "<<Mpi::WorldSize()<<endl;
+   }
 
    // Parse command-line options.
    const char *mesh_file = "../../data/inline-quad.mesh";
