@@ -1,6 +1,4 @@
 # Get build info
-HOST=`hostname`
-DATE=`date +%F`
 PWD=`pwd`
 TEMP=$PWD/.tmp.buildInfo.hpp
 
@@ -15,7 +13,6 @@ fi
 RBVMS=$1
 shift
 for var in $@; do
-  echo ${var^^}
   if [ ${var^^} == HYPRE ]; then
      HYPRE=true
   fi
@@ -29,56 +26,41 @@ echo "#include <sstream>"                  > $TEMP
 
 echo 'std::istringstream buildInfo(R"~('   >>$TEMP
 echo "------------------------------------"| tee -a $TEMP
-echo "Build info:"                         | tee -a $TEMP
-echo "  "$HOST                             | tee -a $TEMP
-echo "  "$DATE                             | tee -a $TEMP
-echo "RBVMS git info:"                     | tee -a $TEMP
+echo " - Build info:"                      | tee -a $TEMP
+hostname                                   | tee -a $TEMP
+date +%F                                   | tee -a $TEMP
 
+echo " - RBVMS git info:"                  | tee -a $TEMP
 cd $RBVMS
-pwd
-RBVMS_GIT_REPO=`git remote get-url origin`
-RBVMS_GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
-RBVMS_GIT_COMMIT=`git rev-parse HEAD`
-RBVMS_GIT_STATUS=`git status -s`
-
-echo "  "$RBVMS_GIT_REPO                   | tee -a $TEMP
-echo "  "$RBVMS_GIT_BRANCH                 | tee -a $TEMP
-echo "  "$RBVMS_GIT_COMMIT                 | tee -a $TEMP
-echo "  "$RBVMS_GIT_STATUS                 | tee -a $TEMP
+pwd | tee -a $TEMP
+git remote get-url origin | tee -a $TEMP
+git rev-parse --abbrev-ref HEAD | tee -a $TEMP
+git rev-parse HEAD | tee -a $TEMP
+git status -sb | tee -a $TEMP
 
 if $HYPRE; then
-  echo "HYPRE git info:"                     | tee -a $TEMP
+  echo " - HYPRE git info:"| tee -a $TEMP
   cd $RBVMS/../hypre
-  pwd
-  HYPRE_GIT_REPO=`git remote get-url origin`
-  HYPRE_GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
-  HYPRE_GIT_COMMIT=`git rev-parse HEAD`
-  HYPRE_GIT_STATUS=`git status -s`
-
-  echo "  "$HYPRE_GIT_REPO                   | tee -a $TEMP
-  echo "  "$HYPRE_GIT_BRANCH                 | tee -a $TEMP
-  echo "  "$HYPRE_GIT_COMMIT                 | tee -a $TEMP
-  echo "  "$HYPRE_GIT_STATUS                 | tee -a $TEMP
+  pwd | tee -a $TEMP
+  git remote get-url origin | tee -a $TEMP
+  git rev-parse --abbrev-ref HEAD | tee -a $TEMP
+  git rev-parse HEAD | tee -a $TEMP
+  git status -sb | tee -a $TEMP
 
 fi
 
 if $MFEM; then
-  echo "MFEM git info:"                      | tee -a $TEMP
+  echo " - MFEM git info:"| tee -a $TEMP
   cd $RBVMS/../mfem
-  pwd
-  MFEM_GIT_REPO=`git remote get-url origin`
-  MFEM_GIT_BRANCH=`git rev-parse --abbrev-ref HEAD`
-  MFEM_GIT_COMMIT=`git rev-parse HEAD`
-  MFEM_GIT_STATUS=`git status -s`
-
-  echo "  "$MFEM_GIT_REPO                    | tee -a $TEMP
-  echo "  "$MFEM_GIT_BRANCH                  | tee -a $TEMP
-  echo "  "$MFEM_GIT_COMMIT                  | tee -a $TEMP
-  echo "  "$MFEM_GIT_STATUS                  | tee -a $TEMP
+  pwd | tee -a $TEMP
+  git remote get-url origin | tee -a $TEMP
+  git rev-parse --abbrev-ref HEAD | tee -a $TEMP
+  git rev-parse HEAD | tee -a $TEMP
+  git status -sb | tee -a $TEMP
 fi
 
 echo "------------------------------------"| tee -a $TEMP
-echo ')~");'                               >>$TEMP
+echo ')~");'>>$TEMP
 
 # Replace hpp if necessary
 cd $RBVMS
