@@ -45,30 +45,14 @@ add_executable(rbvms rbvms.cpp
                monitor.hpp tau.hpp weakform.hpp)
 
 target_link_libraries(rbvms PRIVATE ${MFEM_LIBRARIES})
-install(PROGRAMS DESTINATION ${PROJECT_BINARY_DIR})
-
-#-------------------------------------------------------------------------------
-#
-#-------------------------------------------------------------------------------
-#install(PROGRAMS DESTINATION ${INSTALL_BIN_DIR})
-
-# Install the executable
-#install(TARGETS delfi-exe RUNTIME DESTINATION bin)
-
+install(TARGETS rbvms DESTINATION bin)
 
 #-------------------------------------------------------------------------------
 # Add tests
 #-------------------------------------------------------------------------------
-#if (MFEM_ENABLE_TESTING)
-#  add_test(NAME ex_condif
-#    COMMAND $<TARGET_FILE:condif> -no-vis
-#    -m ${PROJECT_SOURCE_DIR}/data/square-nurbs.mesh -r 1 -o 2)
-#endif()
+#add_test(NAME navsto_np=4
+#         COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${RBVMS_MPI_NP}
+#         ${MPIEXEC_PREFLAGS} $<TARGET_FILE:navsto> -no-vis
+#         ${MPIEXEC_POSTFLAGS}
+#        -m ${PROJECT_SOURCE_DIR}/data/square-nurbs.mesh -r 1 -o 2)
 
-#if (MFEM_ENABLE_TESTING)
-#    add_test(NAME navsto_np=4
-#      COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MFEM_MPI_NP}
-#      ${MPIEXEC_PREFLAGS} $<TARGET_FILE:navsto> -no-vis
-#      ${MPIEXEC_POSTFLAGS}
-#      -m ${PROJECT_SOURCE_DIR}/data/square-nurbs.mesh -r 1 -o 2)
-#endif()
