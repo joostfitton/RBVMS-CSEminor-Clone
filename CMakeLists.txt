@@ -1,64 +1,58 @@
 #-------------------------------------------------------------------------------
 # This file is part of the RBVMS application.
 #
-# RBVMSis free software; you can redistribute it and/or modify it under the
+# This is the superbuild file.
+#
+# RBVMS is free software; you can redistribute it and/or modify it under the
 # terms of the BSD-3 license. We welcome feedback and contributions, see file
 # CONTRIBUTING.md for details.
-#----------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.8)
 include(ExternalProject)
-project(RBVMS} LANGUAGES CXX C)
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/config)
+project("RBVMS Superbuild" LANGUAGES CXX C)
+
+set(INSTALL_DIR ${PROJECT_BINARY_DIR})
 
 #-------------------------------------------------------------------------------
-# Add external
+# Get git submodules
 #-------------------------------------------------------------------------------
-set(EXT_DIR ${PROJECT_BINARY_DIR}/external)
-include_directories(${EXT_DIR}/include)
+find_package(Git REQUIRED)
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+    option(GIT_SUBMODULE "Check submodules during build" ON)
+    if(GIT_SUBMODULE)
+        message(STATUS "Submodule update")
+        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+            message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+        endif()
+    endif()
+endif()
 
 #-------------------------------------------------------------------------------
-# Add MPI
+# Build hypre
 #-------------------------------------------------------------------------------
-find_package(MPI REQUIRED)
-
-set(MPICXX mpicxx)
-set(MPI_CXX_INCLUDE_DIRS ${MPI_CXX_INCLUDE_PATH})
-set(CMAKE_CXX_COMPILER ${MPICXX})
-
-#-------------------------------------------------------------------------------
-# Add METIS
-#-------------------------------------------------------------------------------
-find_package(METIS REQUIRED)
-
-#-------------------------------------------------------------------------------
-# Add hypre
-#-------------------------------------------------------------------------------
-set(HYPRE_REPO "git@github.com:hypre-space/hypre.git" 
-    CACHE STRING "Location of the hypre repository")
-
 ExternalProject_Add(hypre
-                    PREFIX external
-                    CONFIGURE_COMMAND ${CMAKE_COMMAND} "${EXT_DIR}/src/hypre/src" 
-                                      "-DHYPRE_INSTALL_PREFIX=${EXT_DIR}"
-                    GIT_REPOSITORY ${HYPRE_REPO})
-
-set(HYPRE_LIB ${EXT_DIR}/lib/libHYPRE.a)
+                    PREFIX ${INSTALL_DIR}
+                    CONFIGURE_COMMAND ${CMAKE_COMMAND} "${PROJECT_SOURCE_DIR}/hypre/src" 
+                                      "-DHYPRE_INSTALL_PREFIX=${INSTALL_DIR}"
+                    SOURCE_DIR ${PROJECT_SOURCE_DIR}/hypre)
 
 #-------------------------------------------------------------------------------
-# Add mfem
-#-------------------------------------------------------------------------------s
-set(MFEM_REPO "git@github.com:mfem/mfem.git"
-    CACHE STRING "Location of the mfem repository")
-
+# Build mfem
+#-------------------------------------------------------------------------------
 ExternalProject_Add(mfem
-                    PREFIX external
+                    PREFIX ${INSTALL_DIR}
                     DEPENDS hypre
-                    CMAKE_ARGS -DMFEM_USE_MPI=Yes -DHYPRE_DIR=${EXT_DIR} -DCMAKE_INSTALL_PREFIX=${EXT_DIR}
-                    GIT_REPOSITORY ${MFEM_REPO})
-
-set(MFEM_LIB ${EXT_DIR}/lib/libmfem.a)
+                    CMAKE_ARGS -DMFEM_USE_MPI=Yes -DHYPRE_DIR=${INSTALL_DIR} -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}
+                    SOURCE_DIR  ${PROJECT_SOURCE_DIR}/mfem)
 
 #-------------------------------------------------------------------------------
-# Add rbvms
+# Build rbvms
 #-------------------------------------------------------------------------------
-add_subdirectory(src)
+ExternalProject_Add(rbvms
+                    PREFIX ${INSTALL_DIR}
+                    DEPENDS mfem
+                    CMAKE_ARGS -DMFEM_DIR=${INSTALL_DIR}
+                    SOURCE_DIR ${PROJECT_SOURCE_DIR}/rbvms)

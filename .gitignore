@@ -1,3 +1,6 @@
+# Build info
+rbvms/buildInfo.hpp
+
 # Build directories
 build/*
 debug/*
