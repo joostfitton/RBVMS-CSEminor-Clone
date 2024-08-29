@@ -79,10 +79,29 @@ using the following command:
 sudo apt-get install gmsh
 ```
 
-# License
+# Licenses
 
-MFEM is distributed under the terms of the BSD-3 license. All new contributions must be made under this license. See LICENSE and NOTICE for details.
+RBVM is distributed under the terms of the Apache License (Version 2.0). 
+
+All new contributions must be made under the Apache-2.0 licenses.
+
+## MFEM
+MFEM is distributed under the terms of the BSD-3 license. All new contributions 
+must be made under this license. See LICENSE and NOTICE for details.
 
 SPDX-License-Identifier: BSD-3-Clause
 LLNL Release Number: LLNL-CODE-806117
 DOI: 10.11578/dc.20171025.1248
+
+## Hypre
+HYPRE is distributed under the terms of both the MIT license and the Apache License (Version 2.0). 
+Users may choose either license, at their option.
+
+All new contributions must be made under both the MIT and Apache-2.0 licenses.
+
+See LICENSE-MIT, LICENSE-APACHE, COPYRIGHT, and NOTICE for details.
+
+SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
+LLNL-CODE-778117
+
