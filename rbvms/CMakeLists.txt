@@ -54,8 +54,8 @@ endif()
 # Build executable
 #-------------------------------------------------------------------------------
 add_executable(rbvms rbvms.cpp
-               monitor.cpp precon.cpp coefficients.cpp tau.cpp weakform.cpp
-               monitor.hpp precon.hpp coefficients.hpp tau.hpp weakform.hpp buildInfo.hpp)
+               coefficients.cpp evolution.cpp monitor.cpp precon.cpp tau.cpp weakform.cpp
+               coefficients.hpp evolution.hpp monitor.hpp precon.hpp tau.hpp weakform.hpp buildInfo.hpp)
 
 target_link_libraries(rbvms PRIVATE ${MFEM_LIBRARIES})
 install(TARGETS rbvms DESTINATION bin)

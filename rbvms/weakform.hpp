@@ -28,6 +28,7 @@ private:
    VectorCoefficient &c_force;
 
    /// Numerical parameters
+   real_t dt;
    Tau &tau_m, &tau_c, &tau_b;
 
    /// Dimension data
@@ -39,6 +40,7 @@ private:
    DenseMatrix flux;
 
    /// Solution & Residual vector
+   Vector u0;
    DenseMatrix elf_u, elv_u;
 
    /// Shape function data
@@ -50,6 +52,10 @@ public:
    IncNavStoIntegrator(Coefficient &mu_,
                        VectorCoefficient &force_,
                        Tau &tau_m, Tau &tau_c, Tau &tau_b);
+
+   // Set the solution
+   void SetSolution(const real_t dt,
+                    const Vector &u0);
 
    /// Assemble the local energy
    virtual real_t GetElementEnergy(const Array<const FiniteElement *>&el,

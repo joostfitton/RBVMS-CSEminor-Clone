@@ -45,6 +45,13 @@ IncNavStoIntegrator::IncNavStoIntegrator(Coefficient &mu,
    }
 }
 
+void IncNavStoIntegrator::SetSolution(const real_t dt_,
+                                      const Vector &u0_)
+{
+   dt = dt_;
+   u0 = u0_;
+}
+
 real_t IncNavStoIntegrator::GetElementEnergy(
    const Array<const FiniteElement *>&el,
    ElementTransformation &Tr,

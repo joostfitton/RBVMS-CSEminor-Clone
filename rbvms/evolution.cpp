@@ -11,12 +11,29 @@ using namespace mfem;
 using namespace RBVMS;
 
 //--------------------------------------------------------------------------
-Evolution::Evolution(ParBlockNonlinearForm &form,
-                     Solver &solver)
-   : TimeDependentOperator(form->Width()),0,0, IMPLICIT),
-     form(form),solver(solver)
+Evolution::Evolution(Array<ParFiniteElementSpace *> spaces,
+                     Array<Array<int> *> ess_bdr,
+                     Solver &solver,
+                     IncNavStoIntegrator *integrator)
+   : TimeDependentOperator(0, 0.0, IMPLICIT),
+     form(spaces),solver(solver), integrator(integrator)
 {
-   zero.SetSize(0);
+   // Find size
+   width = 0;
+   for (int i=0; i<spaces.Size(); ++i)
+   {
+      width += spaces[i]->GetTrueVSize();
+   }
+   height = width;
+
+   // Initialize formulation
+   form.AddDomainIntegrator(integrator);
+   Array<Vector *> rhs(2);
+   rhs = nullptr;
+   form.SetEssentialBC(ess_bdr, rhs);
+
+   // Initialize solver
+   solver.SetOperator(form);
 }
 
 Evolution::~Evolution()
@@ -24,9 +41,10 @@ Evolution::~Evolution()
 
 }
 
-void Evolution::ImplicitSolve(const double dt,
+void Evolution::ImplicitSolve(const real_t dt,
                               const Vector &u0, Vector &dudt)
 {
-  // form->SetParameters(dt, &u0);
+   integrator->SetSolution(dt, u0);
+   Vector zero;
    solver.Mult(zero, dudt);
 }

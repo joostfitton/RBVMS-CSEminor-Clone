@@ -19,16 +19,17 @@ namespace RBVMS
 class Evolution : public TimeDependentOperator
 {
 private:
-   Vector zero;
+   ParBlockNonlinearForm form;
+   Solver &solver;
+   IncNavStoIntegrator *integrator;
 
 public:
-   ParBlockNonlinearForm &form;
-   Solver &solver;
+   Evolution(Array<ParFiniteElementSpace *> spaces,
+             Array<Array<int> *> ess_bdr,
+             Solver &solver,
+             IncNavStoIntegrator *integrator);
 
-   Evolution(ParBlockNonlinearForm &form,
-             Solver &solver);
-
-   virtual void ImplicitSolve(const double dt,
+   virtual void ImplicitSolve(const real_t dt,
                               const Vector &x,
                               Vector &k) override;
 

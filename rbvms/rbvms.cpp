@@ -5,20 +5,21 @@
 // terms of the BSD-3 license.
 
 #if __has_include("buildInfo.hpp")
-  #include "buildInfo.hpp"
+#include "buildInfo.hpp"
 #else
-  #include "noInfo.hpp"
+#include "noInfo.hpp"
 #endif
 
 #if defined(_WIN32)
-  #include <winsock.h>
+#include <winsock.h>
 #else
-  #include <unistd.h>
+#include <unistd.h>
 #endif
 
 #include "mfem.hpp"
 #include "coefficients.hpp"
 #include "weakform.hpp"
+#include "evolution.hpp"
 #include "precon.hpp"
 #include "monitor.hpp"
 
@@ -27,12 +28,13 @@ using namespace mfem;
 
 int main(int argc, char *argv[])
 {
-   // Initialize MPI and HYPRE.
+   // 1. Initialize MPI and HYPRE.
    Mpi::Init(argc, argv);
    int num_procs = Mpi::WorldSize();
    int myid = Mpi::WorldRank();
    Hypre::Init();
 
+   // 2. Print relevant info
    if (Mpi::Root())
    {
       // Build info
@@ -70,7 +72,7 @@ int main(int argc, char *argv[])
       MPI_Send (&host, sizeof(host), MPI_CHAR, 0, 1, MPI_COMM_WORLD);
    }
 
-   // Parse command-line options.
+   // 3. Parse command-line options.
    const char *mesh_file = "../../data/inline-quad.mesh";
    const char *ref_file  = "";
    int order = 1;
@@ -111,18 +113,11 @@ int main(int argc, char *argv[])
    }
    if (myid == 0) { args.PrintOptions(cout); }
 
-   // Read the mesh from the given mesh file. We can handle triangular,
-   // quadrilateral, tetrahedral, hexahedral, surface and volume meshes with
-   // the same code.
+   // 4. Read the mesh from the given mesh file.
    Mesh mesh(mesh_file, 1, 1);
    int dim = mesh.Dimension();
 
-   // Refine the mesh to increase the resolution. In this example we do
-   // 'ref_levels' of uniform refinement and knot insertion of knots defined
-   // in a refinement file. We choose 'ref_levels' to be the largest number
-   // that gives a final mesh with no more than 50,000 elements.
    {
-      // Mesh refinement as defined in refinement file
       if (mesh.NURBSext && (strlen(ref_file) != 0))
       {
          mesh.RefineNURBSFromFile(ref_file);
@@ -137,14 +132,14 @@ int main(int argc, char *argv[])
    ParMesh pmesh(MPI_COMM_WORLD, mesh);
    mesh.Clear();
 
-   // Define a finite element space on the mesh. Here we use continuous
-   // Lagrange finite elements of the specified order.
+   // 5. Define a finite element space on the mesh.
    Array<FiniteElementCollection *> fecs(2);
    fecs[0] = new H1_FECollection(order, dim);
    fecs[1] = new H1_FECollection(order, dim);
 
    Array<ParFiniteElementSpace *> spaces(2);
-   spaces[0] = new ParFiniteElementSpace(&pmesh, fecs[0], dim); //, Ordering::byVDIM);
+   spaces[0] = new ParFiniteElementSpace(&pmesh, fecs[0],
+                                         dim); //, Ordering::byVDIM);
    spaces[1] = new ParFiniteElementSpace(&pmesh, fecs[1]);
 
    // Report the degree of freedoms used
@@ -182,7 +177,7 @@ int main(int argc, char *argv[])
    ess_bdr[0] = &ess_bdr_u;
    ess_bdr[1] = &ess_bdr_p;
 
-   // Define the solution vector xp as a finite element grid function
+   // 6. Define the solution vector xp as a finite element grid function
    Array<int> bOffsets(3);
    bOffsets[0] = 0;
    bOffsets[1] = spaces[0]->TrueVSize();
@@ -191,6 +186,7 @@ int main(int argc, char *argv[])
 
    BlockVector xp(bOffsets);
 
+   // Define the gridfunctions
    ParGridFunction x_u(spaces[0]);
    ParGridFunction x_p(spaces[1]);
 
@@ -201,32 +197,15 @@ int main(int argc, char *argv[])
    x_u.GetTrueDofs(xp.GetBlock(0));
    x_p.GetTrueDofs(xp.GetBlock(1));
 
+   // Define the visualisation output
    VisItDataCollection visit_dc("navsto", &pmesh);
    visit_dc.RegisterField("u", &x_u);
    visit_dc.RegisterField("p", &x_p);
    visit_dc.SetCycle(0);
    visit_dc.Save();
 
-   // Define the problem parameters
-   LibCoefficient mu(lib_file, "mu", mu_param);
-   LibVectorCoefficient force(dim, lib_file, "force");
 
-   // Define the stabilisation parameters
-   VectorGridFunctionCoefficient adv(&x_u);
-   // ElasticInverseEstimateCoefficient invEst(spaces[0]);
-   RBVMS::FFH92Tau tau(&adv, &mu,  4.0);
-   RBVMS::FF91Delta delta(&adv, &mu );
-
-   tau.print = delta.print = (myid == 0);
-
-   // Define the block nonlinear form
-   ParBlockNonlinearForm Hform(spaces);
-   Hform.AddDomainIntegrator(new RBVMS::IncNavStoIntegrator(mu, force,
-                                                            tau, delta, delta));
-   Array<Vector *> rhs(2);
-   rhs = nullptr; // Set all entries in the array
-   Hform.SetEssentialBC(ess_bdr, rhs);
-
+   // 7. Define the time stepping algorithm
    // Set up the preconditioner
    Array<Solver *> sol_array({new HypreSmoother(),
             new HypreSmoother()});
@@ -256,21 +235,27 @@ int main(int argc, char *argv[])
    newton_solver.SetAbsTol(1e-8);
    newton_solver.SetMaxIter(25);
    newton_solver.SetSolver(j_gmres);
-   newton_solver.SetOperator(Hform);
 
-   // Solve the Newton system
-   Vector zero;
-   newton_solver.Mult(zero, xp);
+   // 7. Define the weka form
+   // Define the physical parameters
+   LibCoefficient mu(lib_file, "mu", mu_param);
+   LibVectorCoefficient force(dim, lib_file, "force");
 
+   // Define the stabilisation parameters
+   VectorGridFunctionCoefficient adv(&x_u);
+   // ElasticInverseEstimateCoefficient invEst(spaces[0]);
+   RBVMS::FFH92Tau tau(&adv, &mu,  4.0);
+   RBVMS::FF91Delta delta(&adv, &mu );
+
+   // Define evolution
+   RBVMS::Evolution evo(spaces, ess_bdr, newton_solver,
+                        new RBVMS::IncNavStoIntegrator(mu, force,
+                                                       tau, tau, tau));
+
+   // Select the time integrator
    ODESolver *ode_solver = NULL;
    switch (ode_solver_type)
    {
-      // Explicit methods
-      case 1: ode_solver = new ForwardEulerSolver; break;
-      case 2: ode_solver = new RK2Solver(1.0); break;
-      case 3: ode_solver = new RK3SSPSolver; break;
-      case 4: ode_solver = new RK4Solver; break;
-      case 6: ode_solver = new RK6Solver; break;
       // Implicit (L-stable) methods
       case 11: ode_solver = new BackwardEulerSolver; break;
       case 12: ode_solver = new SDIRK23Solver(2); break;
@@ -282,14 +267,12 @@ int main(int argc, char *argv[])
 
       default:
          cout << "Unknown ODE solver type: " << ode_solver_type << '\n';
-         return 3;
+         mfem_error("Can not continue");
    }
+   ode_solver->Init(evo);
 
+   // 9. Actual time integration
    real_t t = 0.0;
-
-   adv.SetTime(t);
-   //  ode_solver->Init(adv);
-
    bool done = false;
    for (int ti = 0; !done; )
    {
@@ -309,13 +292,7 @@ int main(int argc, char *argv[])
       }
    }
 
-   // Save data in the VisIt format
-   // Define the output
-   // Save data in the VisIt format
-   visit_dc.SetCycle(999999);
-   visit_dc.Save();
-
-   // Free the used memory.
+   // 10. Free the used memory.
    for (int i = 0; i < fecs.Size(); ++i)
    {
       delete fecs[i];
