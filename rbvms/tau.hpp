@@ -9,17 +9,10 @@
 
 #include "mfem.hpp"
 
-namespace mfem
-{
+using namespace mfem;
 
-/// Enumerate to indicate the stabilisation type.
-enum StabType
+namespace RBVMS
 {
-   GALERKIN = -2,
-   SUPG = 0,
-   GLS = -1,
-   VMS = 1
-};
 
 /// This Class defines a generic stabilisation parameter.
 class Tau: public Coefficient
@@ -288,6 +281,6 @@ public:
    ~FF91Delta() {};
 };
 
-} // namespace mfem
+} // namespace RBVMS
 
 #endif

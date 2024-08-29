@@ -7,6 +7,7 @@
 #include "tau.hpp"
 
 using namespace mfem;
+using namespace RBVMS;
 
 real_t FFH92Tau::GetElementSize(ElementTransformation &T)
 {
