@@ -87,8 +87,8 @@ LibCoefficient::LibCoefficient(string libName,
 }
 
 /// Evaluate coefficient
-double LibCoefficient::Eval(ElementTransformation &T,
-                                    const IntegrationPoint &ip)
+real_t LibCoefficient::Eval(ElementTransformation &T,
+                            const IntegrationPoint &ip)
 {
    // Homegenous if not defined
    if (!TDFunction) return val;

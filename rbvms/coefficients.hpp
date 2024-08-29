@@ -16,7 +16,7 @@ using namespace std;
 class LibCoefficient : public Coefficient
 {
 protected:
-   typedef double (*TDFunPtr)(double *, int, double);
+   typedef real_t (*TDFunPtr)(real_t *, int, real_t);
    TDFunPtr TDFunction;
    void *libHandle;
    Vector x;
@@ -30,7 +30,7 @@ public:
                   bool required = true, real_t val = 0.0);
 
    /// Evaluate coefficient
-   virtual double Eval(ElementTransformation &T,
+   virtual real_t Eval(ElementTransformation &T,
                        const IntegrationPoint &ip) override;
    /// Destructor
    ~LibCoefficient();
@@ -40,7 +40,7 @@ public:
 class LibVectorCoefficient : public VectorCoefficient
 {
 protected:
-   typedef void (*TDFunPtr)(double *, int, double, double *, int);
+   typedef void (*TDFunPtr)(real_t *, int, real_t, real_t *, int);
    TDFunPtr TDFunction;
    void *libHandle;
    Vector x;
