@@ -5,18 +5,19 @@
 // terms of the BSD-3 license.
 
 #if __has_include("buildInfo.hpp")
-   #include "buildInfo.hpp"
+#include "buildInfo.hpp"
 #else
-   #include "noInfo.hpp"
+#include "noInfo.hpp"
 #endif
 
 #if defined(_WIN32)
-   #include <winsock.h> 
+#include <winsock.h>
 #else
-   #include <unistd.h>
+#include <unistd.h>
 #endif
 
 #include "weakform.hpp"
+#include "precon.hpp"
 #include "monitor.hpp"
 #include "mfem.hpp"
 
@@ -269,12 +270,12 @@ int main(int argc, char *argv[])
    Hform.SetEssentialBC(ess_bdr, rhs);
 
    // Set up the preconditioner
-   JacobianPreconditioner jac_prec(bOffsets,
-   Array<Solver *>({new HypreSmoother(),
-            new HypreSmoother()}));
+   Array<Solver *> sol_array({new HypreSmoother(),
+            new HypreSmoother()});
+   RBVMS::JacobianPreconditioner jac_prec(bOffsets, sol_array);
 
    // Set up the Jacobian solver
-   GeneralResidualMonitor j_monitor(MPI_COMM_WORLD,"\t\t\t\tFGMRES", 25);
+   RBVMS::GeneralResidualMonitor j_monitor(MPI_COMM_WORLD,"\t\t\t\tFGMRES", 25);
    FGMRESSolver j_gmres(MPI_COMM_WORLD);
    j_gmres.iterative_mode = false;
    j_gmres.SetRelTol(1e-2);
@@ -285,9 +286,10 @@ int main(int argc, char *argv[])
    j_gmres.SetPreconditioner(jac_prec);
 
    // Set up the newton solver
-   SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,"Newton", 1, bOffsets,
-                                        &visit_dc, &xp,
-                                        Array<ParGridFunction *>({&x_u, &x_p}));
+   Array<ParGridFunction *> pgf_array({&x_u, &x_p});
+   RBVMS::SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,"Newton", 1,
+                                               bOffsets, &visit_dc, &xp,
+                                               pgf_array);
    NewtonSolver newton_solver(MPI_COMM_WORLD);
    newton_solver.iterative_mode = true;
    newton_solver.SetPrintLevel(-1);
@@ -327,11 +329,7 @@ int main(int argc, char *argv[])
          return 3;
    }
 
-
-
-
    real_t t = 0.0;
-
 
    adv.SetTime(t);
    //  ode_solver->Init(adv);

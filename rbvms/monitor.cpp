@@ -7,7 +7,34 @@
 #include "monitor.hpp"
 
 using namespace mfem;
+using namespace RBVMS;
 
+GeneralResidualMonitor::GeneralResidualMonitor(const std::string& prefix_,
+                                               int print_lvl)
+   : prefix(prefix_)
+{
+   print_level = print_lvl;
+   rank = 1;
+}
+
+GeneralResidualMonitor::GeneralResidualMonitor(MPI_Comm comm,
+                                               const std::string& prefix_, int print_lvl)
+   : prefix(prefix_)
+{
+#ifndef MFEM_USE_MPI
+   print_level = print_lvl;
+#else
+   MPI_Comm_rank(comm, &rank);
+   if (rank == 0)
+   {
+      print_level = print_lvl;
+   }
+   else
+   {
+      print_level = -1;
+   }
+#endif
+}
 
 void GeneralResidualMonitor::MonitorResidual(int it, real_t norm,
                                              const Vector &r, bool final)
@@ -24,6 +51,71 @@ void GeneralResidualMonitor::MonitorResidual(int it, real_t norm,
                 << ",  ||r||/||r_0|| = " << 100*norm/norm0<<" % \n";
    }
 }
+
+
+SystemResidualMonitor::SystemResidualMonitor(const std::string& prefix_,
+                                             int print_lvl,
+                                             Array<int> &offsets,
+                                             DataCollection *dc_)
+   : prefix(prefix_), bOffsets(offsets), dc(dc_)
+{
+   print_level = print_lvl;
+   nvar = bOffsets.Size()-1;
+   norm0.SetSize(nvar);
+   rank = 1;
+}
+
+SystemResidualMonitor::SystemResidualMonitor(MPI_Comm comm,
+                                             const std::string& prefix_,
+                                             int print_lvl,
+                                             Array<int> &offsets)
+   : prefix(prefix_), bOffsets(offsets), dc(nullptr), xp(nullptr)
+{
+#ifndef MFEM_USE_MPI
+   print_level = print_lvl;
+   rank = 1;
+#else
+   MPI_Comm_rank(comm, &rank);
+   if (rank == 0)
+   {
+      print_level = print_lvl;
+   }
+   else
+   {
+      print_level = -1;
+   }
+#endif
+   nvar = bOffsets.Size()-1;
+   norm0.SetSize(nvar);
+}
+
+SystemResidualMonitor::SystemResidualMonitor(MPI_Comm comm,
+                                             const std::string& prefix_,
+                                             int print_lvl,
+                                             Array<int> &offsets,
+                                             DataCollection *dc_,
+                                             BlockVector *x,
+                                             Array<ParGridFunction *> pgf_)
+   : prefix(prefix_), bOffsets(offsets), dc(dc_), xp(x), pgf(pgf_)
+{
+#ifndef MFEM_USE_MPI
+   print_level = print_lvl;
+   rank = 1;
+#else
+   MPI_Comm_rank(comm, &rank);
+   if (rank == 0)
+   {
+      print_level = print_lvl;
+   }
+   else
+   {
+      print_level = -1;
+   }
+#endif
+   nvar = bOffsets.Size()-1;
+   norm0.SetSize(nvar);
+}
+
 
 void SystemResidualMonitor::MonitorResidual(int it, real_t norm,
                                             const Vector &r, bool final)
@@ -66,28 +158,6 @@ void SystemResidualMonitor::MonitorResidual(int it, real_t norm,
       {
          mfem::out <<vnorm[i]<<"\t"<< 100*vnorm[i]/norm0[i]<<" % \n";
       }
-   }
-}
-
-
-void JacobianPreconditioner::SetOperator(const Operator &op)
-{
-   BlockOperator *jacobian = (BlockOperator *) &op;
-
-   for (int i = 0; i < prec.Size(); ++i)
-   {
-      prec[i]->SetOperator(jacobian->GetBlock(i,i));
-      SetDiagonalBlock(i, prec[i]);
-   }
-
-   SetBlock(1,0, const_cast<Operator*>(&jacobian->GetBlock(1,0)));
-}
-
-JacobianPreconditioner::~JacobianPreconditioner()
-{
-   for (int i = 0; i < prec.Size(); ++i)
-   {
-      delete prec[i];
    }
 }
 
