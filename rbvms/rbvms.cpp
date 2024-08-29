@@ -1,20 +1,19 @@
-// Copyright (c) 2010-2024, Lawrence Livermore National Security, LLC. Produced
-// at the Lawrence Livermore National Laboratory. All Rights reserved. See files
-// LICENSE and NOTICE for details. LLNL-CODE-806117.
+// This file is part of the RBVMS application. For more information and source code
+// availability visit https://idoakkerman.github.io/
 //
-// This file is part of the MFEM library. For more information and source code
-// availability visit https://mfem.org.
-//
-// MFEM is free software; you can redistribute it and/or modify it under the
-// terms of the BSD-3 license. We welcome feedback and contributions, see file
-// CONTRIBUTING.md for details.
-//
-// Stabilized  Navier-Stokes
+// RBVMS is free software; you can redistribute it and/or modify it under the
+// terms of the BSD-3 license.
 
 #if __has_include("buildInfo.hpp")
    #include "buildInfo.hpp"
 #else
    #include "noInfo.hpp"
+#endif
+
+#if defined(_WIN32)
+   #include <winsock.h> 
+#else
+   #include <unistd.h>
 #endif
 
 #include "weakform.hpp"
@@ -25,8 +24,6 @@
 #include <iostream>
 #include <list>
 #include <ctime>
-
-#include <unistd.h>       // Linux  -> #include <winsock.h>      //Windows
 
 using namespace std;
 using namespace mfem;
@@ -55,7 +52,7 @@ real_t kappa_fun(const Vector & x)
 void force_fun(const Vector & x, Vector &f)
 {
    f = 0.0;
-  // f[0] = x[1]*(1.0-x[1])*x[0]*(1.0-x[0]);
+   // f[0] = x[1]*(1.0-x[1])*x[0]*(1.0-x[0]);
 }
 
 int main(int argc, char *argv[])
@@ -98,9 +95,9 @@ int main(int argc, char *argv[])
    }
    else
    {
-       char host[80];
-       gethostname(host,sizeof(host));
-       MPI_Send (&host, sizeof(host), MPI_CHAR, 0, 1, MPI_COMM_WORLD);
+      char host[80];
+      gethostname(host,sizeof(host));
+      MPI_Send (&host, sizeof(host), MPI_CHAR, 0, 1, MPI_COMM_WORLD);
    }
 
    // Parse command-line options.
@@ -132,7 +129,7 @@ int main(int argc, char *argv[])
                   "Finite element order isoparametric space.");
    args.AddOption(&ref_levels, "-r", "--refine",
                   "Number of times to refine the mesh.");
-   args.AddOption(&kappa_param , "-k", "--kappa",
+   args.AddOption(&kappa_param, "-k", "--kappa",
                   "Sets the diffusion parameters, should be positive.");
    args.AddOption(&problem, "-p", "--problem",
                   "Select the problem to solve:\n\t"
@@ -149,10 +146,10 @@ int main(int argc, char *argv[])
    args.Parse();
    if (!args.Good())
    {
-      if (myid == 0) args.PrintUsage(cout);
+      if (myid == 0) { args.PrintUsage(cout); }
       return 1;
    }
-   if (myid == 0) args.PrintOptions(cout);
+   if (myid == 0) { args.PrintOptions(cout); }
 
    // Read the mesh from the given mesh file. We can handle triangular,
    // quadrilateral, tetrahedral, hexahedral, surface and volume meshes with
@@ -175,7 +172,7 @@ int main(int argc, char *argv[])
       {
          mesh.UniformRefinement();
       }
-      if (myid == 0) mesh.PrintInfo();
+      if (myid == 0) { mesh.PrintInfo(); }
    }
    ParMesh pmesh(MPI_COMM_WORLD, mesh);
    mesh.Clear();
@@ -188,17 +185,20 @@ int main(int argc, char *argv[])
    fecs[1] = new H1_FECollection(order, dim);
 
    Array<ParFiniteElementSpace *> spaces(2);
-   spaces[0] = new ParFiniteElementSpace(&pmesh, fecs[0], dim);//, Ordering::byVDIM);
+   spaces[0] = new ParFiniteElementSpace(&pmesh, fecs[0],
+                                         dim);//, Ordering::byVDIM);
    spaces[1] = new ParFiniteElementSpace(&pmesh, fecs[1]);
 
    Array<int> tdof(num_procs),udof(num_procs),pdof(num_procs);
    tdof = 0;
    tdof[myid] = spaces[0]->TrueVSize();
-   MPI_Reduce(tdof.GetData(), udof.GetData(), num_procs, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+   MPI_Reduce(tdof.GetData(), udof.GetData(), num_procs, MPI_INT, MPI_MAX, 0,
+              MPI_COMM_WORLD);
 
    tdof = 0;
    tdof[myid] = spaces[1]->TrueVSize();
-   MPI_Reduce(tdof.GetData(), pdof.GetData(), num_procs, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+   MPI_Reduce(tdof.GetData(), pdof.GetData(), num_procs, MPI_INT, MPI_MAX, 0,
+              MPI_COMM_WORLD);
 
    if (myid == 0)
    {
@@ -206,13 +206,13 @@ int main(int argc, char *argv[])
       mfem::out << "\tVelocity = "<<spaces[0]->GlobalTrueVSize() << endl;
       mfem::out << "\tPressure = "<<spaces[1]->GlobalTrueVSize() << endl;
       mfem::out << "Number of finite element unknowns per partition:\n";
-      mfem::out <<  "\tVelocity = ";udof.Print(mfem::out, num_procs);
-      mfem::out <<  "\tPressure = ";pdof.Print(mfem::out, num_procs);
+      mfem::out <<  "\tVelocity = "; udof.Print(mfem::out, num_procs);
+      mfem::out <<  "\tPressure = "; pdof.Print(mfem::out, num_procs);
    }
 
    // Mark all velocity boundary dofs as essential
    Array<Array<int> *> ess_bdr(2);
-  // Array<int> ess_tdof_list;
+   // Array<int> ess_tdof_list;
 
    Array<int> ess_bdr_u(spaces[0]->GetMesh()->bdr_attributes.Max());
    Array<int> ess_bdr_p(spaces[1]->GetMesh()->bdr_attributes.Max());
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
 
    // Define the stabilisation parameters
    VectorGridFunctionCoefficient adv(&x_u);
-  // ElasticInverseEstimateCoefficient invEst(spaces[0]);
+   // ElasticInverseEstimateCoefficient invEst(spaces[0]);
    FFH92Tau tau(&adv, &kappa,  4.0);
    FF91Delta delta(&adv, &kappa );
 
@@ -262,15 +262,16 @@ int main(int argc, char *argv[])
 
    // Define the block nonlinear form
    ParBlockNonlinearForm Hform(spaces);
-   Hform.AddDomainIntegrator(new StabInNavStoIntegrator(kappa, force, tau, delta));
+   Hform.AddDomainIntegrator(new RBVMS::IncNavStoIntegrator(kappa, force,
+                                                            tau, delta, delta));
    Array<Vector *> rhs(2);
    rhs = nullptr; // Set all entries in the array
    Hform.SetEssentialBC(ess_bdr, rhs);
 
    // Set up the preconditioner
    JacobianPreconditioner jac_prec(bOffsets,
-                                   Array<Solver *>({new HypreSmoother(),
-                                                    new HypreSmoother()}));
+   Array<Solver *>({new HypreSmoother(),
+            new HypreSmoother()}));
 
    // Set up the Jacobian solver
    GeneralResidualMonitor j_monitor(MPI_COMM_WORLD,"\t\t\t\tFGMRES", 25);
@@ -284,7 +285,8 @@ int main(int argc, char *argv[])
    j_gmres.SetPreconditioner(jac_prec);
 
    // Set up the newton solver
-   SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,"Newton", 1, bOffsets, &visit_dc, &xp,
+   SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,"Newton", 1, bOffsets,
+                                        &visit_dc, &xp,
                                         Array<ParGridFunction *>({&x_u, &x_p}));
    NewtonSolver newton_solver(MPI_COMM_WORLD);
    newton_solver.iterative_mode = true;
@@ -332,7 +334,7 @@ int main(int argc, char *argv[])
 
 
    adv.SetTime(t);
- //  ode_solver->Init(adv);
+   //  ode_solver->Init(adv);
 
    bool done = false;
    for (int ti = 0; !done; )

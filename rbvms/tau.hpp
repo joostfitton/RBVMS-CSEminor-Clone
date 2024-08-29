@@ -1,13 +1,8 @@
-// Copyright (c) 2010-2024, Lawrence Livermore National Security, LLC. Produced
-// at the Lawrence Livermore National Laboratory. All Rights reserved. See files
-// LICENSE and NOTICE for details. LLNL-CODE-806117.
+// This file is part of the RBVMS application. For more information and source code
+// availability visit https://idoakkerman.github.io/
 //
-// This file is part of the MFEM library. For more information and source code
-// availability visit https://mfem.org.
-//
-// MFEM is free software; you can redistribute it and/or modify it under the
-// terms of the BSD-3 license. We welcome feedback and contributions, see file
-// CONTRIBUTING.md for details.
+// RBVMS is free software; you can redistribute it and/or modify it under the
+// terms of the BSD-3 license.
 
 #ifndef RBVMS_TAU_HPP
 #define RBVMS_TAU_HPP
@@ -109,12 +104,12 @@ protected:
    /// Element size in different directions
    Vector h;
 
-    /** Returns element size according to:
+   /** Returns element size according to:
 
-        Harari, I, & Hughes, T.J.R.
-        What are C and h?: Inequalities for the analysis and design of
-        finite element methods.
-        Computer methods in applied mechanics and engineering 97(2), 157-192.
+       Harari, I, & Hughes, T.J.R.
+       What are C and h?: Inequalities for the analysis and design of
+       finite element methods.
+       Computer methods in applied mechanics and engineering 97(2), 157-192.
    */
    real_t GetElementSize(ElementTransformation &T);
 
@@ -125,8 +120,8 @@ public:
        - @a ie_cf for computing the inverse estimates
        - @a f factor for computing the element Pe/Re number (default = 2)
        - @a p which norm to use for the velocity magnitude (default = 2) */
-    FFH92Tau (VectorCoefficient *a, Coefficient *k, Coefficient *ie_cf,
-              real_t f = 2.0, real_t norm_p = 2.0)
+   FFH92Tau (VectorCoefficient *a, Coefficient *k, Coefficient *ie_cf,
+             real_t f = 2.0, real_t norm_p = 2.0)
       :  Tau(a,k), invEst_cf(ie_cf), Ci(-1.0), k_fac(f), p(norm_p) {};
 
    /** Construct a stabilized confection-diffusion integrator with:
@@ -135,9 +130,9 @@ public:
        - @a fes to provide to coefficient for computing the inverse estimates
        - @a f factor for computing the element Pe/Re number (default = 2)
        - @a p which norm to use for the velocity magnitude (default = 2) */
-    FFH92Tau (VectorCoefficient *a, Coefficient *k,
-              FiniteElementSpace *fes,
-              real_t f = 2.0, real_t norm_p = 2.0)
+   FFH92Tau (VectorCoefficient *a, Coefficient *k,
+             FiniteElementSpace *fes,
+             real_t f = 2.0, real_t norm_p = 2.0)
       :  Tau(a,k), Ci(-1.0), k_fac(f), p(norm_p)
    {
       invEst_cf = NULL;//new InverseEstimateCoefficient(fes);
@@ -150,8 +145,8 @@ public:
        - @a c_explicity provided inverse estimate (default = 1.0/12.0)
        - @a f factor for computing the element Pe/Re number (default = 2)
        - @a p which norm to use for the velocity magnitude (default = 2)*/
-    FFH92Tau (VectorCoefficient *a, Coefficient *k,
-              real_t c_ = 1.0/12.0, real_t f = 2.0, real_t norm_p = 2.0)
+   FFH92Tau (VectorCoefficient *a, Coefficient *k,
+             real_t c_ = 1.0/12.0, real_t f = 2.0, real_t norm_p = 2.0)
       :  Tau(a,k), Ci(c_), k_fac(f), p(norm_p)
    {
       invEst_cf = NULL;
@@ -165,7 +160,7 @@ public:
        SetConvection and SetDiffusion, respectivly*/
    FFH92Tau (Coefficient *ie_cf,
              real_t f = 2.0, real_t norm_p = 2.0)
-      : invEst_cf(ie_cf), Ci(-1.0), k_fac(f) , p(norm_p) {};
+      : invEst_cf(ie_cf), Ci(-1.0), k_fac(f), p(norm_p) {};
 
    /** Construct a stabilized confection-diffusion integrator with:
        - @a fes to provide to coefficient for computing the inverse estimates
@@ -175,7 +170,7 @@ public:
        SetConvection and SetDiffusion, respectivly*/
    FFH92Tau (FiniteElementSpace *fes,
              real_t f = 2.0, real_t norm_p = 2.0)
-      : Ci(-1.0), k_fac(f) , p(norm_p)
+      : Ci(-1.0), k_fac(f), p(norm_p)
    {
       invEst_cf = NULL;//new InverseEstimateCoefficient(fes);
       own_ie = true;
@@ -197,7 +192,7 @@ public:
    virtual real_t Eval(ElementTransformation &T,
                        const IntegrationPoint &ip) override;
 
-    // Destructor
+   // Destructor
    ~FFH92Tau()
    { if (own_ie) { delete invEst_cf; } }
 };
@@ -225,9 +220,9 @@ public:
        - @a ie_cf for computing the inverse estimates
        - @a f factor for computing the element Pe/Re number (default = 2)
        - @a p which norm to use for the velocity magnitude (default = 2) */
-    FF91Delta (VectorCoefficient *a, Coefficient *k, Coefficient *ie_cf,
-               real_t l = 1.0, real_t f = 2.0, real_t norm_p = 2.0)
-      :  FFH92Tau(a,k,ie_cf,f,norm_p), lambda(l){};
+   FF91Delta (VectorCoefficient *a, Coefficient *k, Coefficient *ie_cf,
+              real_t l = 1.0, real_t f = 2.0, real_t norm_p = 2.0)
+      :  FFH92Tau(a,k,ie_cf,f,norm_p), lambda(l) {};
 
    /** Construct a stabilized confection-diffusion integrator with:
        - @a a the convection velocity
@@ -236,11 +231,11 @@ public:
        - @a l overall scalling factor for delta (default = 1)
        - @a f factor for computing the element Pe/Re number (default = 4)
        - @a p which norm to use for the velocity magnitude  (default = 2) */
-    FF91Delta (VectorCoefficient *a, Coefficient *k,
-               FiniteElementSpace *fes,
-               real_t l = 1.0,
-               real_t f = 4.0, real_t norm_p = 2.0)
-      :  FFH92Tau(a,k,fes,f,norm_p), lambda(l){};
+   FF91Delta (VectorCoefficient *a, Coefficient *k,
+              FiniteElementSpace *fes,
+              real_t l = 1.0,
+              real_t f = 4.0, real_t norm_p = 2.0)
+      :  FFH92Tau(a,k,fes,f,norm_p), lambda(l) {};
 
    /** Construct a stabilized confection-diffusion integrator with:
        - @a a the convection velocity
@@ -249,11 +244,11 @@ public:
        - @a l overall scalling factor for delta (default = 1)
        - @a f factor for computing the element Pe/Re number (default = 4)
        - @a p which norm to use for the velocity magnitude (default = 2)*/
-    FF91Delta (VectorCoefficient *a, Coefficient *k,
-               real_t c_ = 1.0/12.0, real_t l = 1.0,
-               real_t f = 4.0, real_t norm_p = 2.0)
-      : FFH92Tau(a,k,c_,f,norm_p), lambda(l){};
-      
+   FF91Delta (VectorCoefficient *a, Coefficient *k,
+              real_t c_ = 1.0/12.0, real_t l = 1.0,
+              real_t f = 4.0, real_t norm_p = 2.0)
+      : FFH92Tau(a,k,c_,f,norm_p), lambda(l) {};
+
    /** Construct a stabilized confection-diffusion integrator with:
        - @a ie_cf for computing the inverse estimatestes
        - @a f factor for Pe/Re definition (default = 2)
@@ -262,7 +257,7 @@ public:
        SetConvection and SetDiffusion, respectivly*/
    FF91Delta (Coefficient *ie_cf,
               real_t l = 1.0, real_t f = 2.0, real_t norm_p = 2.0)
-      : FFH92Tau(ie_cf,f,norm_p), lambda(l){};
+      : FFH92Tau(ie_cf,f,norm_p), lambda(l) {};
 
    /** Construct a stabilized confection-diffusion integrator with:
        - @a fes for computing the inverse estimates
@@ -272,7 +267,7 @@ public:
        SetConvection and SetDiffusion, respectivly*/
    FF91Delta (FiniteElementSpace *fes,
               real_t l = 1.0, real_t f = 4.0, real_t norm_p = 2.0)
-      : FFH92Tau(fes,f,norm_p), lambda(l){};
+      : FFH92Tau(fes,f,norm_p), lambda(l) {};
 
    /** Construct a stabilized confection-diffusion integrator with:
        - @a c_explicity provided inverse estimate (default = 1.0/12.0)
@@ -283,14 +278,14 @@ public:
        SetConvection and SetDiffusion, respectivly*/
    FF91Delta (real_t c_ = 1.0/12.0, real_t l = 1.0,
               real_t f = 2.0, real_t norm_p = 2.0)
-      : FFH92Tau(c_,f,norm_p), lambda(l){};
+      : FFH92Tau(c_,f,norm_p), lambda(l) {};
 
    /// Evaluate the coefficient at @a ip.
    virtual real_t Eval(ElementTransformation &T,
                        const IntegrationPoint &ip) override;
 
-    // Destructor
-   ~FF91Delta(){};
+   // Destructor
+   ~FF91Delta() {};
 };
 
 } // namespace mfem

@@ -1,71 +1,60 @@
-// Copyright (c) 2010-2024, Lawrence Livermore National Security, LLC. Produced
-// at the Lawrence Livermore National Laboratory. All Rights reserved. See files
-// LICENSE and NOTICE for details. LLNL-CODE-806117.
+// This file is part of the RBVMS application. For more information and source code
+// availability visit https://idoakkerman.github.io/
 //
-// This file is part of the MFEM library. For more information and source code
-// availability visit https://mfem.org.
-//
-// MFEM is free software; you can redistribute it and/or modify it under the
-// terms of the BSD-3 license. We welcome feedback and contributions, see file
-// CONTRIBUTING.md for details.
+// RBVMS is free software; you can redistribute it and/or modify it under the
+// terms of the BSD-3 license.
 
 #include "weakform.hpp"
 
 using namespace mfem;
+using namespace RBVMS;
 
-StabInNavStoIntegrator::StabInNavStoIntegrator(Coefficient &mu_,
-                                               VectorCoefficient &force_,
-                                               Tau &t, Tau &d, StabType s)
- : c_mu(&mu_), c_force(&force_), tau(&t), delta(&d), stab(s)
-{ }
-
-void StabInNavStoIntegrator::SetDim(int dim_)
+IncNavStoIntegrator::IncNavStoIntegrator(Coefficient &mu,
+                                         VectorCoefficient &force,
+                                         Tau &tm, Tau &tc, Tau &tb)
+   : c_mu(mu), c_force(force), tau_m(tm), tau_c(tc), tau_b(tb)
 {
-  if (dim_ != dim)
-  {
-     dim = dim_;
-     u.SetSize(dim);
-     f.SetSize(dim);
-     res.SetSize(dim);
-     up.SetSize(dim);
-     grad_u.SetSize(dim);
-     hess_u.SetSize(dim, (dim*(dim+1))/2);
-     grad_p.SetSize(dim);
-     hmap.SetSize(dim,dim);
+   dim = force.GetVDim();
+   u.SetSize(dim);
+   f.SetSize(dim);
+   res.SetSize(dim);
+   up.SetSize(dim);
+   grad_u.SetSize(dim);
+   hess_u.SetSize(dim, (dim*(dim+1))/2);
+   grad_p.SetSize(dim);
+   hmap.SetSize(dim,dim);
 
-     if (dim == 2)
-     {
-        hmap(0,0) = 0;
-        hmap(0,1) =  hmap(1,0) =  1;
-        hmap(1,1) = 2; 
-     }
-     else if (dim == 2)
-     {
-        hmap(0,0) = 0;
-        hmap(0,1) = hmap(1,0) = 1;
-        hmap(0,2) = hmap(2,0) = 2;
-        hmap(1,1) = 3;
-        hmap(1,2) = hmap(2,1) = 4;
-        hmap(2,2) = 5;
-     }
-     else
-     {
-        mfem_error("Only implemented for 2D and 3D");
-     }
-  }
+   if (dim == 2)
+   {
+      hmap(0,0) = 0;
+      hmap(0,1) =  hmap(1,0) =  1;
+      hmap(1,1) = 2;
+   }
+   else if (dim == 2)
+   {
+      hmap(0,0) = 0;
+      hmap(0,1) = hmap(1,0) = 1;
+      hmap(0,2) = hmap(2,0) = 2;
+      hmap(1,1) = 3;
+      hmap(1,2) = hmap(2,1) = 4;
+      hmap(2,2) = 5;
+   }
+   else
+   {
+      mfem_error("Only implemented for 2D and 3D");
+   }
 }
 
-real_t StabInNavStoIntegrator::GetElementEnergy(
+real_t IncNavStoIntegrator::GetElementEnergy(
    const Array<const FiniteElement *>&el,
    ElementTransformation &Tr,
    const Array<const Vector *>&elfun)
 {
    if (el.Size() != 2)
    {
-      mfem_error("StabInNavStoIntegrator::GetElementEnergy"
+      mfem_error("IncNavStoIntegrator::GetElementEnergy"
                  " has incorrect block finite element space size!");
    }
-   SetDim(el[0]->GetDim());
    int dof_u = el[0]->GetDof();
 
    sh_u.SetSize(dof_u);
@@ -92,7 +81,7 @@ real_t StabInNavStoIntegrator::GetElementEnergy(
    return energy;
 }
 
-void StabInNavStoIntegrator::AssembleElementVector(
+void IncNavStoIntegrator::AssembleElementVector(
    const Array<const FiniteElement *> &el,
    ElementTransformation &Tr,
    const Array<const Vector *> &elfun,
@@ -100,19 +89,18 @@ void StabInNavStoIntegrator::AssembleElementVector(
 {
    if (el.Size() != 2)
    {
-      mfem_error("StabInNavStoIntegrator::AssembleElementVector"
+      mfem_error("IncNavStoIntegrator::AssembleElementVector"
                  " has finite element space of incorrect block number");
    }
 
    int dof_u = el[0]->GetDof();
    int dof_p = el[1]->GetDof();
 
-   SetDim(el[0]->GetDim());
    int spaceDim = Tr.GetSpaceDim();
    bool hess = false;//(el[0]->GetDerivType() == (int) FiniteElement::HESS);
    if (dim != spaceDim)
    {
-      mfem_error("StabInNavStoIntegrator::AssembleElementVector"
+      mfem_error("IncNavStoIntegrator::AssembleElementVector"
                  " is not defined on manifold meshes");
    }
    elvec[0]->SetSize(dof_u*dim);
@@ -139,8 +127,8 @@ void StabInNavStoIntegrator::AssembleElementVector(
       const IntegrationPoint &ip = ir.IntPoint(i);
       Tr.SetIntPoint(&ip);
       real_t w = ip.weight * Tr.Weight();
-      real_t mu = c_mu->Eval(Tr, ip);
-      c_force->Eval(f, Tr, ip);
+      real_t mu = c_mu.Eval(Tr, ip);
+      c_force.Eval(f, Tr, ip);
 
       // Compute shape and interpolate
       el[0]->CalcPhysShape(Tr, sh_u);
@@ -175,32 +163,33 @@ void StabInNavStoIntegrator::AssembleElementVector(
       {
          for (int j = 0; j < dim; ++j)
          {
-            res[j] -= mu*(hess_u(j,hmap(i,i)) + 
+            res[j] -= mu*(hess_u(j,hmap(i,i)) +
                           hess_u(i,hmap(j,i))); // Add diffusion
          }
       }
 
       // Compute stability params
-      real_t t = tau->Eval(Tr, ip);
-      real_t d = delta->Eval(Tr, ip);
+      real_t tm = tau_m.Eval(Tr, ip);
+      real_t tc = tau_c.Eval(Tr, ip);
 
       // Compute momentum weak residual
-      flux.Diag(-p + d*grad_u.Trace(),dim);  // Add pressure & LSIC to flux
+      flux.Diag(-p + tc*grad_u.Trace(),dim);  // Add pressure & LSIC to flux
       grad_u.Symmetrize();                   // Grad to strain
       flux.Add(2*mu,grad_u);                 // Add stress to flux
       AddMult_a_VVt(-1.0, u, flux);          // Add convection to flux
-      AddMult_a_VWt(t, res, u, flux);        // Add SUPG to flux --> check order u and res
+      AddMult_a_VWt(tm, res, u,
+                    flux);        // Add SUPG to flux --> check order u and res
       AddMult_a_ABt(w, shg_u, flux, elv_u);  // Add flux term to rhs
       AddMult_a_VWt(-w, sh_u, f,    elv_u);  // Add force term to rhs
 
       // Compute momentum weak residual
       elvec[1]->Add(w*grad_u.Trace(), sh_p); // Add Galerkin term
       shg_p.Mult(res, sh_p);                 // PSPG help term
-      elvec[1]->Add(w*t, sh_p);              // Add PSPG term  - sign looks worng?
+      elvec[1]->Add(w*tm, sh_p);              // Add PSPG term  - sign looks worng?
    }
 }
 
-void StabInNavStoIntegrator::AssembleElementGrad(
+void IncNavStoIntegrator::AssembleElementGrad(
    const Array<const FiniteElement*> &el,
    ElementTransformation &Tr,
    const Array<const Vector *> &elfun,
@@ -209,7 +198,6 @@ void StabInNavStoIntegrator::AssembleElementGrad(
    int dof_u = el[0]->GetDof();
    int dof_p = el[1]->GetDof();
 
-   SetDim(el[0]->GetDim());
    bool hess = false;// = (el[0]->GetDerivType() == (int) FiniteElement::HESS);
 
    elf_u.UseExternalData(elfun[0]->GetData(), dof_u, dim);
@@ -238,9 +226,9 @@ void StabInNavStoIntegrator::AssembleElementGrad(
       const IntegrationPoint &ip = ir.IntPoint(i);
       Tr.SetIntPoint(&ip);
       real_t w = ip.weight * Tr.Weight();
-      real_t mu = c_mu->Eval(Tr, ip);
-      real_t t = tau->Eval(Tr, ip);
-      real_t d = delta->Eval(Tr, ip);
+      real_t mu = c_mu.Eval(Tr, ip);
+      real_t tm = tau_m.Eval(Tr, ip);
+      real_t tc = tau_c.Eval(Tr, ip);
 
       el[0]->CalcPhysShape(Tr, sh_u);
       elf_u.MultTranspose(sh_u, u);
@@ -265,13 +253,13 @@ void StabInNavStoIntegrator::AssembleElementGrad(
             real_t mat = 0.0;
             for (int dim_u = 0; dim_u < dim; ++dim_u)
             {
-              mat += shg_u(i_u,dim_u)*shg_u(j_u,dim_u);
+               mat += shg_u(i_u,dim_u)*shg_u(j_u,dim_u);
             }
             mat *= mu;
 
             // Convection
             mat -= ushg_u(i_u)*sh_u(j_u);      // Galerkin
-            mat += t*ushg_u(i_u)*ushg_u(j_u);  // SUPG
+            mat += tm*ushg_u(i_u)*ushg_u(j_u);  // SUPG
 
             mat *= w;
             for (int dim_u = 0; dim_u < dim; ++dim_u)
@@ -284,7 +272,7 @@ void StabInNavStoIntegrator::AssembleElementGrad(
                for (int j_dim = 0; j_dim < dim; ++j_dim)
                {
                   (*elmats(0,0))(i_u + i_dim*dof_u, j_u + j_dim*dof_u) +=
-                     (mu + d)*shg_u(i_u,j_dim)*shg_u(j_u,i_dim)*w;
+                     (mu + tc)*shg_u(i_u,j_dim)*shg_u(j_u,i_dim)*w;
                }
             }
          }
@@ -297,14 +285,14 @@ void StabInNavStoIntegrator::AssembleElementGrad(
          {
             for (int dim_u = 0; dim_u < dim; ++dim_u)
             {
-               (*elmats(0,1))(j_u + dof_u * dim_u, i_p) += (shg_p(i_p, dim_u)*t*ushg_u(j_u)
-                                                           -shg_u(j_u,dim_u)*sh_p(i_p))*w;
+               (*elmats(0,1))(j_u + dof_u * dim_u, i_p) += (shg_p(i_p, dim_u)*tm*ushg_u(j_u)
+                                                            -shg_u(j_u,dim_u)*sh_p(i_p))*w;
                (*elmats(1,0))(i_p, j_u + dof_u * dim_u) +=  shg_u(j_u,dim_u)*sh_p(i_p)*w;
             }
          }
       }
 
       // p,p block
-      AddMult_a_AAt(w*t, shg_p, *elmats(1,1));
+      AddMult_a_AAt(w*tm, shg_p, *elmats(1,1));
    }
 }

@@ -1,13 +1,8 @@
-// Copyright (c) 2010-2024, Lawrence Livermore National Security, LLC. Produced
-// at the Lawrence Livermore National Laboratory. All Rights reserved. See files
-// LICENSE and NOTICE for details. LLNL-CODE-806117.
+// This file is part of the RBVMS application. For more information and source code
+// availability visit https://idoakkerman.github.io/
 //
-// This file is part of the MFEM library. For more information and source code
-// availability visit https://mfem.org.
-//
-// MFEM is free software; you can redistribute it and/or modify it under the
-// terms of the BSD-3 license. We welcome feedback and contributions, see file
-// CONTRIBUTING.md for details.
+// RBVMS is free software; you can redistribute it and/or modify it under the
+// terms of the BSD-3 license.
 
 #ifndef RBVMS_MONITOR_HPP
 #define RBVMS_MONITOR_HPP
@@ -18,7 +13,7 @@
 namespace mfem
 {
 
-/** 
+/**
 
 
 */
@@ -133,7 +128,7 @@ private:
    const std::string prefix;
    int print_level, nvar, rank;
    mutable Vector norm0;
-  // Offsets for extracting block vector segments
+   // Offsets for extracting block vector segments
    Array<int> &bOffsets;
    DataCollection *dc;
    BlockVector *xp;
@@ -141,13 +136,14 @@ private:
 };
 
 // Custom block preconditioner for the Jacobian
-class JacobianPreconditioner : public BlockLowerTriangularPreconditioner //BlockDiagonalPreconditioner
+class JacobianPreconditioner : public
+   BlockLowerTriangularPreconditioner //BlockDiagonalPreconditioner
 {
 protected:
    Array<Solver *> prec;
 public:
    JacobianPreconditioner(Array<int> &offsets, Array<Solver *> p)
-     : BlockLowerTriangularPreconditioner (offsets), prec(p)
+      : BlockLowerTriangularPreconditioner (offsets), prec(p)
    { MFEM_VERIFY(offsets.Size()-1 == p.Size(), ""); };
 
    virtual void SetOperator(const Operator &op);

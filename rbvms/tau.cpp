@@ -1,13 +1,8 @@
-// Copyright (c) 2010-2024, Lawrence Livermore National Security, LLC. Produced
-// at the Lawrence Livermore National Laboratory. All Rights reserved. See files
-// LICENSE and NOTICE for details. LLNL-CODE-806117.
+// This file is part of the RBVMS application. For more information and source code
+// availability visit https://idoakkerman.github.io/
 //
-// This file is part of the MFEM library. For more information and source code
-// availability visit https://mfem.org.
-//
-// MFEM is free software; you can redistribute it and/or modify it under the
-// terms of the BSD-3 license. We welcome feedback and contributions, see file
-// CONTRIBUTING.md for details.
+// RBVMS is free software; you can redistribute it and/or modify it under the
+// terms of the BSD-3 license.
 
 #include "tau.hpp"
 
@@ -88,7 +83,7 @@ real_t FFH92Tau::Eval(ElementTransformation &T,
 }
 
 real_t FF91Delta::Eval(ElementTransformation &T,
-                      const IntegrationPoint &ip)
+                       const IntegrationPoint &ip)
 {
    real_t k = kappa->Eval(T, ip);
    adv->Eval(a, T, ip);
