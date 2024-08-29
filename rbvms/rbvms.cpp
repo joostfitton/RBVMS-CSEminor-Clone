@@ -16,10 +16,13 @@
 #include <unistd.h>
 #endif
 
+
+#include "mfem.hpp"
+#include "coefficients.hpp"
 #include "weakform.hpp"
 #include "precon.hpp"
 #include "monitor.hpp"
-#include "mfem.hpp"
+
 
 #include <fstream>
 #include <iostream>
@@ -113,7 +116,7 @@ int main(int argc, char *argv[])
    int order = 1;
    int ref_levels = 0;
 
-   bool mono = true;
+
 
    int ode_solver_type = 22;
    real_t dt = 0.1;
@@ -130,20 +133,10 @@ int main(int argc, char *argv[])
                   "Finite element order isoparametric space.");
    args.AddOption(&ref_levels, "-r", "--refine",
                   "Number of times to refine the mesh.");
+
    args.AddOption(&kappa_param, "-k", "--kappa",
                   "Sets the diffusion parameters, should be positive.");
-   args.AddOption(&problem, "-p", "--problem",
-                  "Select the problem to solve:\n\t"
-                  "  0 = convection skew-to-the mesh\n\t"
-                  "  1 = manufactured solution\n");
-   args.AddOption(&mono, "-mo", "--mono", "-co",
-                  "--comp",
-                  "Use a monolithic integrator or a composed one.");
-   args.AddOption(&static_cond, "-sc", "--static-condensation", "-no-sc",
-                  "--no-static-condensation", "Enable static condensation.");
-   args.AddOption(&visualization, "-vis", "--visualization", "-no-vis",
-                  "--no-visualization",
-                  "Enable or disable GLVis visualization.");
+
    args.Parse();
    if (!args.Good())
    {
@@ -187,34 +180,35 @@ int main(int argc, char *argv[])
 
    Array<ParFiniteElementSpace *> spaces(2);
    spaces[0] = new ParFiniteElementSpace(&pmesh, fecs[0],
-                                         dim);//, Ordering::byVDIM);
+                                         dim); //, Ordering::byVDIM);
    spaces[1] = new ParFiniteElementSpace(&pmesh, fecs[1]);
 
-   Array<int> tdof(num_procs),udof(num_procs),pdof(num_procs);
-   tdof = 0;
-   tdof[myid] = spaces[0]->TrueVSize();
-   MPI_Reduce(tdof.GetData(), udof.GetData(), num_procs, MPI_INT, MPI_MAX, 0,
-              MPI_COMM_WORLD);
-
-   tdof = 0;
-   tdof[myid] = spaces[1]->TrueVSize();
-   MPI_Reduce(tdof.GetData(), pdof.GetData(), num_procs, MPI_INT, MPI_MAX, 0,
-              MPI_COMM_WORLD);
-
-   if (myid == 0)
+   // Report the degree of freedoms used
    {
-      mfem::out << "Number of finite element unknowns:\n";
-      mfem::out << "\tVelocity = "<<spaces[0]->GlobalTrueVSize() << endl;
-      mfem::out << "\tPressure = "<<spaces[1]->GlobalTrueVSize() << endl;
-      mfem::out << "Number of finite element unknowns per partition:\n";
-      mfem::out <<  "\tVelocity = "; udof.Print(mfem::out, num_procs);
-      mfem::out <<  "\tPressure = "; pdof.Print(mfem::out, num_procs);
+      Array<int> tdof(num_procs),udof(num_procs),pdof(num_procs);
+      tdof = 0;
+      tdof[myid] = spaces[0]->TrueVSize();
+      MPI_Reduce(tdof.GetData(), udof.GetData(), num_procs, MPI_INT, MPI_MAX, 0,
+                 MPI_COMM_WORLD);
+
+      tdof = 0;
+      tdof[myid] = spaces[1]->TrueVSize();
+      MPI_Reduce(tdof.GetData(), pdof.GetData(), num_procs, MPI_INT, MPI_MAX, 0,
+                 MPI_COMM_WORLD);
+
+      if (myid == 0)
+      {
+         mfem::out << "Number of finite element unknowns:\n";
+         mfem::out << "\tVelocity = "<<spaces[0]->GlobalTrueVSize() << endl;
+         mfem::out << "\tPressure = "<<spaces[1]->GlobalTrueVSize() << endl;
+         mfem::out << "Number of finite element unknowns per partition:\n";
+         mfem::out <<  "\tVelocity = "; udof.Print(mfem::out, num_procs);
+         mfem::out <<  "\tPressure = "; pdof.Print(mfem::out, num_procs);
+      }
    }
 
    // Mark all velocity boundary dofs as essential
    Array<Array<int> *> ess_bdr(2);
-   // Array<int> ess_tdof_list;
-
    Array<int> ess_bdr_u(spaces[0]->GetMesh()->bdr_attributes.Max());
    Array<int> ess_bdr_p(spaces[1]->GetMesh()->bdr_attributes.Max());
 
@@ -256,8 +250,8 @@ int main(int argc, char *argv[])
    // Define the stabilisation parameters
    VectorGridFunctionCoefficient adv(&x_u);
    // ElasticInverseEstimateCoefficient invEst(spaces[0]);
-   FFH92Tau tau(&adv, &kappa,  4.0);
-   FF91Delta delta(&adv, &kappa );
+   RBVMS::FFH92Tau tau(&adv, &kappa,  4.0);
+   RBVMS::FF91Delta delta(&adv, &kappa );
 
    tau.print = delta.print = (myid == 0);
 
@@ -303,8 +297,6 @@ int main(int argc, char *argv[])
    // Solve the Newton system
    Vector zero;
    newton_solver.Mult(zero, xp);
-
-
 
    ODESolver *ode_solver = NULL;
    switch (ode_solver_type)

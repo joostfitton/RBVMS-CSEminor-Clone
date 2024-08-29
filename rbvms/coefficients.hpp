@@ -21,8 +21,6 @@ protected:
    void *libHandle;
    Vector x;
 
-
-
 public:
    /// Define a time-independent coefficient from a C-library
    LibFunctionCoefficient(string libName, string funName, bool required = true);
@@ -34,5 +32,29 @@ public:
    /// Destructor
    ~LibFunctionCoefficient();
 };
+
+/// class for C-function coefficient in seperate library
+class LibFunctionVectorCoefficient : public VectorCoefficient
+{
+protected:
+   typedef void (*TDFunPtr)(double *, int, double, double *, int);
+   TDFunPtr TDFunction;
+   void *libHandle;
+   Vector x;
+
+public:
+   /// Define a time-independent coefficient from a C-library
+   LibFunctionVectorCoefficient(int vdim, string libName, string funName, bool required = true);
+   LibFunctionVectorCoefficient(int vdim, string libName, vector<string> funNames, bool required = true);
+
+   /// Evaluate coefficient
+   virtual void Eval(Vector &V,
+                     ElementTransformation &T,
+                     const IntegrationPoint &ip) override;
+   /// Destructor
+   ~LibFunctionVectorCoefficient();
+};
+
+
 
 #endif
