@@ -5,9 +5,10 @@ using namespace std;
 using namespace mfem;
 
 /// Constructor
-LibFunctionCoefficient::LibFunctionCoefficient(string libName,
+LibCoefficient::LibCoefficient(string libName,
                                                string funName,
-                                               bool required)
+                                               bool required,
+                                               real_t val) : val(val)
 {
    // Open library
    libHandle = dlopen (libName.c_str(), RTLD_LAZY);
@@ -18,7 +19,7 @@ LibFunctionCoefficient::LibFunctionCoefficient(string libName,
       {
          mfem_error("Can not obtain required function.\n");
       }
-      cout<<"Function "<<funName<<" will be set to homogenous."<<endl;
+      cout<<"Function "<<funName<<" will be set to val = "<<val<< endl;
       return;
    }
 
@@ -31,14 +32,15 @@ LibFunctionCoefficient::LibFunctionCoefficient(string libName,
       {
          mfem_error("Can not obtain required function.\n");
       }
-      cout<<"Function will be set to homogenous."<<endl;
+      cout<<"Function will be set to val = "<<val<< endl;
    }
 }
 
 /// class for C-function coefficient in seperate library
-LibFunctionCoefficient::LibFunctionCoefficient(string libName,
+LibCoefficient::LibCoefficient(string libName,
                                                vector<string> funNames,
-                                               bool required)
+                                               bool required,
+                                               real_t val) : val(val)
 {
    // Open library
    libHandle = dlopen (libName.c_str(), RTLD_LAZY);
@@ -54,7 +56,7 @@ LibFunctionCoefficient::LibFunctionCoefficient(string libName,
       {
          cout<<" "<<funNames[i];
       }
-      cout<<" will be set to homogenous."<<endl;
+      cout<<" will be set to val = "<<val<< endl;
       return;
    }
 
@@ -80,16 +82,16 @@ LibFunctionCoefficient::LibFunctionCoefficient(string libName,
       {
          mfem_error("Can not obtain required function.\n");
       }
-      cout<<"Function will be set to homogenous."<<endl;
+      cout<<"Function will be set to val = "<<val<< endl;
    }
 }
 
 /// Evaluate coefficient
-double LibFunctionCoefficient::Eval(ElementTransformation &T,
+double LibCoefficient::Eval(ElementTransformation &T,
                                     const IntegrationPoint &ip)
 {
    // Homegenous if not defined
-   if (!TDFunction) return 0.0;
+   if (!TDFunction) return val;
 
    // Evaluate library function
    T.Transform(ip, x);
@@ -97,15 +99,15 @@ double LibFunctionCoefficient::Eval(ElementTransformation &T,
 }
 
 /// Destructor
-LibFunctionCoefficient::~LibFunctionCoefficient()
+LibCoefficient::~LibCoefficient()
 {
    if (libHandle) dlclose(libHandle);
 }
 
 
 /// Constructor
-LibFunctionVectorCoefficient::
-   LibFunctionVectorCoefficient(int vdim,
+LibVectorCoefficient::
+   LibVectorCoefficient(int vdim,
                                 string libName,
                                 string funName,
                                 bool required) : VectorCoefficient(vdim)
@@ -119,7 +121,8 @@ LibFunctionVectorCoefficient::
       {
          mfem_error("Can not obtain required function.\n");
       }
-      cout<<"Function "<<funName<<" will be set to homogenous."<<endl;
+      cout<<"Function "<<funName<<
+            " will be set to be homogenous."<<endl;
       return;
    }
 
@@ -132,13 +135,13 @@ LibFunctionVectorCoefficient::
       {
          mfem_error("Can not obtain required function.\n");
       }
-      cout<<"Function will be set to homogenous."<<endl;
+      cout<<"Function set to be homogenous."<<endl;
    }
 }
 
 /// class for C-function coefficient in seperate library
-LibFunctionVectorCoefficient::
-   LibFunctionVectorCoefficient(int vdim,
+LibVectorCoefficient::
+   LibVectorCoefficient(int vdim,
                                 string libName,
                                 vector<string> funNames,
                                 bool required) : VectorCoefficient(vdim)
@@ -188,7 +191,7 @@ LibFunctionVectorCoefficient::
 }
 
 /// Evaluate coefficient
-void LibFunctionVectorCoefficient::Eval(Vector &V,
+void LibVectorCoefficient::Eval(Vector &V,
                                         ElementTransformation &T,
                                         const IntegrationPoint &ip)
 {
@@ -205,7 +208,7 @@ void LibFunctionVectorCoefficient::Eval(Vector &V,
 }
 
 /// Destructor
-LibFunctionVectorCoefficient::~LibFunctionVectorCoefficient()
+LibVectorCoefficient::~LibVectorCoefficient()
 {
    if (libHandle) dlclose(libHandle);
 }

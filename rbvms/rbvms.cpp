@@ -5,17 +5,16 @@
 // terms of the BSD-3 license.
 
 #if __has_include("buildInfo.hpp")
-#include "buildInfo.hpp"
+  #include "buildInfo.hpp"
 #else
-#include "noInfo.hpp"
+  #include "noInfo.hpp"
 #endif
 
 #if defined(_WIN32)
-#include <winsock.h>
+  #include <winsock.h>
 #else
-#include <unistd.h>
+  #include <unistd.h>
 #endif
-
 
 #include "mfem.hpp"
 #include "coefficients.hpp"
@@ -23,41 +22,8 @@
 #include "precon.hpp"
 #include "monitor.hpp"
 
-
-#include <fstream>
-#include <iostream>
-#include <list>
-#include <ctime>
-
 using namespace std;
 using namespace mfem;
-
-real_t kappa_param = 1.0;
-real_t pi  = (real_t)(M_PI);
-
-using VectorFun = std::function<void(const Vector & x, Vector & a)>;
-using ScalarFun = std::function<real_t(const Vector & x)>;
-
-void sol_fun(const Vector & x, Vector &sol)
-{
-   sol = 0.0;
-   if ((x[1] - 0.99 > 0.0) &&
-       (fabs(x[0] - 0.5) < 0.49) )
-   {
-      sol[0] = 1.0;
-   }
-}
-
-real_t kappa_fun(const Vector & x)
-{
-   return kappa_param;
-}
-
-void force_fun(const Vector & x, Vector &f)
-{
-   f = 0.0;
-   // f[0] = x[1]*(1.0-x[1])*x[0]*(1.0-x[0]);
-}
 
 int main(int argc, char *argv[])
 {
@@ -107,16 +73,13 @@ int main(int argc, char *argv[])
    // Parse command-line options.
    const char *mesh_file = "../../data/inline-quad.mesh";
    const char *ref_file  = "";
-   int problem = 0;
-   int sstype = -2;
-   bool static_cond = false;
-   bool visualization = false;
-
-   real_t penalty = -1;
    int order = 1;
    int ref_levels = 0;
 
+   real_t mu_param = 1.0;
+   real_t penalty = -1.0;
 
+   const char *lib_file = "libfun.so";
 
    int ode_solver_type = 22;
    real_t dt = 0.1;
@@ -134,7 +97,10 @@ int main(int argc, char *argv[])
    args.AddOption(&ref_levels, "-r", "--refine",
                   "Number of times to refine the mesh.");
 
-   args.AddOption(&kappa_param, "-k", "--kappa",
+   args.AddOption(&lib_file, "-l", "--lib",
+                  "Library file to use for IC, BC, force and solution function defintions.");
+
+   args.AddOption(&mu_param, "-m", "--mu",
                   "Sets the diffusion parameters, should be positive.");
 
    args.Parse();
@@ -172,15 +138,13 @@ int main(int argc, char *argv[])
    mesh.Clear();
 
    // Define a finite element space on the mesh. Here we use continuous
-   // Lagrange finite elements of the specified order. If order < 1, we
-   // instead use an isoparametric/isogeometric space.
+   // Lagrange finite elements of the specified order.
    Array<FiniteElementCollection *> fecs(2);
    fecs[0] = new H1_FECollection(order, dim);
    fecs[1] = new H1_FECollection(order, dim);
 
    Array<ParFiniteElementSpace *> spaces(2);
-   spaces[0] = new ParFiniteElementSpace(&pmesh, fecs[0],
-                                         dim); //, Ordering::byVDIM);
+   spaces[0] = new ParFiniteElementSpace(&pmesh, fecs[0], dim); //, Ordering::byVDIM);
    spaces[1] = new ParFiniteElementSpace(&pmesh, fecs[1]);
 
    // Report the degree of freedoms used
@@ -230,7 +194,7 @@ int main(int argc, char *argv[])
    ParGridFunction x_u(spaces[0]);
    ParGridFunction x_p(spaces[1]);
 
-   VectorFunctionCoefficient sol(dim, sol_fun);
+   LibVectorCoefficient sol(dim, lib_file, "sol");
    x_u.ProjectCoefficient(sol);
    x_p = 0.0;
 
@@ -244,20 +208,20 @@ int main(int argc, char *argv[])
    visit_dc.Save();
 
    // Define the problem parameters
-   FunctionCoefficient kappa(kappa_fun);
-   VectorFunctionCoefficient force(dim, force_fun);
+   LibCoefficient mu(lib_file, "mu", mu_param);
+   LibVectorCoefficient force(dim, lib_file, "force");
 
    // Define the stabilisation parameters
    VectorGridFunctionCoefficient adv(&x_u);
    // ElasticInverseEstimateCoefficient invEst(spaces[0]);
-   RBVMS::FFH92Tau tau(&adv, &kappa,  4.0);
-   RBVMS::FF91Delta delta(&adv, &kappa );
+   RBVMS::FFH92Tau tau(&adv, &mu,  4.0);
+   RBVMS::FF91Delta delta(&adv, &mu );
 
    tau.print = delta.print = (myid == 0);
 
    // Define the block nonlinear form
    ParBlockNonlinearForm Hform(spaces);
-   Hform.AddDomainIntegrator(new RBVMS::IncNavStoIntegrator(kappa, force,
+   Hform.AddDomainIntegrator(new RBVMS::IncNavStoIntegrator(mu, force,
                                                             tau, delta, delta));
    Array<Vector *> rhs(2);
    rhs = nullptr; // Set all entries in the array

@@ -13,28 +13,31 @@ using namespace mfem;
 using namespace std;
 
 /// class for C-function coefficient in seperate library
-class LibFunctionCoefficient : public Coefficient
+class LibCoefficient : public Coefficient
 {
 protected:
    typedef double (*TDFunPtr)(double *, int, double);
    TDFunPtr TDFunction;
    void *libHandle;
    Vector x;
+   real_t val;
 
 public:
    /// Define a time-independent coefficient from a C-library
-   LibFunctionCoefficient(string libName, string funName, bool required = true);
-   LibFunctionCoefficient(string libName, vector<string> funNames, bool required = true);
+   LibCoefficient(string libName, string funName,
+                  bool required = true, real_t val = 0.0);
+   LibCoefficient(string libName, vector<string> funNames,
+                  bool required = true, real_t val = 0.0);
 
    /// Evaluate coefficient
    virtual double Eval(ElementTransformation &T,
                        const IntegrationPoint &ip) override;
    /// Destructor
-   ~LibFunctionCoefficient();
+   ~LibCoefficient();
 };
 
 /// class for C-function coefficient in seperate library
-class LibFunctionVectorCoefficient : public VectorCoefficient
+class LibVectorCoefficient : public VectorCoefficient
 {
 protected:
    typedef void (*TDFunPtr)(double *, int, double, double *, int);
@@ -44,15 +47,15 @@ protected:
 
 public:
    /// Define a time-independent coefficient from a C-library
-   LibFunctionVectorCoefficient(int vdim, string libName, string funName, bool required = true);
-   LibFunctionVectorCoefficient(int vdim, string libName, vector<string> funNames, bool required = true);
+   LibVectorCoefficient(int vdim, string libName, string funName, bool required = true);
+   LibVectorCoefficient(int vdim, string libName, vector<string> funNames, bool required = true);
 
    /// Evaluate coefficient
    virtual void Eval(Vector &V,
                      ElementTransformation &T,
                      const IntegrationPoint &ip) override;
    /// Destructor
-   ~LibFunctionVectorCoefficient();
+   ~LibVectorCoefficient();
 };
 
 
