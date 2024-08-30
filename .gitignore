@@ -1,3 +1,5 @@
+TODO
+
 # Build info
 rbvms/buildInfo.hpp
 
@@ -9,7 +11,7 @@ opt/*
 install/*
 bin/*
 
-# Build directories
+# Run directories
 examples/navsto_*
 
 # Prerequisites
