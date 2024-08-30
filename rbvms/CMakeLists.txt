@@ -3,9 +3,59 @@
 # RBVMSis free software; you can redistribute it and/or modify it under the
 # terms of the BSD-3 license. We welcome feedback and contributions, see file
 # CONTRIBUTING.md for details.
-#----------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.8)
 project(RBVMS LANGUAGES CXX C)
+
+#-------------------------------------------------------------------------------
+# Add MPI
+#-------------------------------------------------------------------------------
+list(APPEND SOURCES
+     coefficients.cpp
+     evolution.cpp
+     monitor.cpp
+     precon.cpp
+     tau.cpp
+     weakform.cpp
+     printInfo.cpp)
+
+list(APPEND HEADERS
+     coefficients.hpp
+     evolution.hpp
+     monitor.hpp
+     precon.hpp
+     tau.hpp
+     weakform.hpp
+     buildInfo.hpp)
+
+#-------------------------------------------------------------------------------
+# Create header
+#-------------------------------------------------------------------------------
+get_filename_component(tmp1 ${MFEM_DIR} REALPATH)
+get_filename_component(tmp2 ${PROJECT_BINARY_DIR}/.. REALPATH)
+
+if (${tmp1} STREQUAL ${tmp2})
+  message(STATUS "Report RBVMS, MFEM and hypre in build info.")
+  add_custom_command(OUTPUT buildInfo.hpp
+                     PRE_BUILD
+                     COMMAND /bin/bash 
+                             "${PROJECT_SOURCE_DIR}/../config/buildInfo.sh"
+                             "${PROJECT_SOURCE_DIR}" "mfem" "hypre"
+                     COMMENT "Getting git info")
+else()
+  message(STATUS "External MFEM and hypre libraries used.")
+  message(STATUS "Only report RBVMS in build info.")
+  add_custom_command(OUTPUT buildInfo.hpp
+                     PRE_BUILD
+                     COMMAND /bin/bash
+                             "${PROJECT_SOURCE_DIR}/../config/buildInfo.sh"
+                             "${PROJECT_SOURCE_DIR}"
+                     COMMENT "Getting git info")
+endif()
+
+#-------------------------------------------------------------------------------
+# Add packages
+#-------------------------------------------------------------------------------
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../config)
 
 #-------------------------------------------------------------------------------
@@ -30,32 +80,9 @@ message(STATUS "MFEM_LIBRARIES = ${MFEM_LIBRARIES}")
 include_directories(${MFEM_INCLUDE_DIRS})
 
 #-------------------------------------------------------------------------------
-# Create header
-#-------------------------------------------------------------------------------
-get_filename_component(tmp1 ${MFEM_DIR} REALPATH)
-get_filename_component(tmp2 ${PROJECT_BINARY_DIR}/.. REALPATH)
-
-if (${tmp1} STREQUAL ${tmp2})
-  message(STATUS "Report RBVMS, MFEM and hypre in build info.")
-  add_custom_command(OUTPUT buildInfo.hpp
-                     PRE_BUILD
-                     COMMAND /bin/bash "${PROJECT_SOURCE_DIR}/../config/buildInfo.sh" "${PROJECT_SOURCE_DIR}" "mfem" "hypre"
-                     COMMENT "Getting git info")
-else()
-  message(STATUS "External MFEM and hypre libraries used.")
-  message(STATUS "Only report RBVMS in build info.")
-  add_custom_command(OUTPUT buildInfo.hpp
-                     PRE_BUILD
-                     COMMAND /bin/bash "${PROJECT_SOURCE_DIR}/../config/buildInfo.sh" "${PROJECT_SOURCE_DIR}"
-                     COMMENT "Getting git info")
-endif()
-
-#-------------------------------------------------------------------------------
 # Build executable
 #-------------------------------------------------------------------------------
-add_executable(rbvms rbvms.cpp
-               coefficients.cpp evolution.cpp monitor.cpp precon.cpp tau.cpp weakform.cpp printInfo.cpp
-               coefficients.hpp evolution.hpp monitor.hpp precon.hpp tau.hpp weakform.hpp buildInfo.hpp)
+add_executable(rbvms rbvms.cpp ${SOURCES} ${HEADERS})
 
 target_link_libraries(rbvms PRIVATE ${MFEM_LIBRARIES})
 install(TARGETS rbvms DESTINATION bin)
