@@ -13,7 +13,7 @@ using namespace RBVMS;
 Evolution::Evolution(IncNavStoForm &form,
                      Solver &solver)
    : TimeDependentOperator(form.Width(), 0.0, IMPLICIT),
-     form(form), solver(solver), dudt(form.Width());
+     form(form), solver(solver), dudt(form.Width())
 {
    solver.SetOperator(form);
    dudt = 0.0; 
