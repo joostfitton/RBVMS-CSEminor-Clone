@@ -1,14 +1,6 @@
 // This file is part of the RBVMS application. For more information and source code
 // availability visit https://idoakkerman.github.io/
 //
-//   _____  ______      ____  __  _____ 
-//   |  __ \|  _ \ \    / /  \/  |/ ____|
-//   | |__) | |_) \ \  / /| \  / | (___  
-//   |  _  /|  _ < \ \/ / | |\/| |\___ \ 
-//   | | \ \| |_) | \  /  | |  | |____) |
-//   |_|  \_\____/   \/   |_|  |_|_____/ 
-//
-//
 // RBVMS is free software; you can redistribute it and/or modify it under the
 // terms of the BSD-3 license.
 
