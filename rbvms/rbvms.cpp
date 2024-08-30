@@ -1,20 +1,16 @@
 // This file is part of the RBVMS application. For more information and source code
 // availability visit https://idoakkerman.github.io/
 //
+//   _____  ______      ____  __  _____
+//   |  __ \|  _ \ \    / /  \/  |/ ____|
+//   | |__) | |_) \ \  / /| \  / | (___
+//   |  _  /|  _ < \ \/ / | |\/| |\___ \ 
+//   | | \ \| |_) | \  /  | |  | |____) |
+//   |_|  \_\____/   \/   |_|  |_|_____/
+//
+//
 // RBVMS is free software; you can redistribute it and/or modify it under the
 // terms of the BSD-3 license.
-
-#if __has_include("buildInfo.hpp")
-#include "buildInfo.hpp"
-#else
-#include "noInfo.hpp"
-#endif
-
-#if defined(_WIN32)
-#include <winsock.h>
-#else
-#include <unistd.h>
-#endif
 
 #include "mfem.hpp"
 #include "coefficients.hpp"
@@ -25,6 +21,8 @@
 
 using namespace std;
 using namespace mfem;
+
+extern void printInfo();
 
 int main(int argc, char *argv[])
 {
@@ -37,43 +35,11 @@ int main(int argc, char *argv[])
    // 2. Print relevant info
    if (Mpi::Root())
    {
-      // Build info
-      cout<<"------------------------------------\n";
-      cout<<"Compile time info";
-      cout<< buildInfo.str() << endl;
-
-      // Run info
-      cout<<"------------------------------------\n";
-      cout<<"Run time info"<<endl;
-      cout<<"------------------------------------\n";
-      time_t     now = time(0);
-      struct tm  tstruct = *localtime(&now);
-      char       time[80], host[80];
-      strftime(time, sizeof(time), "%Y-%m-%d.%X", &tstruct);
-      gethostname(host,sizeof(host));
-
-      cout<<"Time: "<<time<<endl;
-      cout<<"Numer of MPI ranks "<<Mpi::WorldSize()<<endl;
-
-      cout<<"List  of hosts\n0: "<<host<<endl;
-      for (int i = 1; i < num_procs; i++)
-      {
-         MPI_Status status;
-         MPI_Recv (&host, sizeof(host), MPI_CHAR, i, 1, MPI_COMM_WORLD, &status);
-         cout<<i<<": "<<host<<endl;
-      }
-
-      cout<<"------------------------------------\n\n";
-   }
-   else
-   {
-      char host[80];
-      gethostname(host,sizeof(host));
-      MPI_Send (&host, sizeof(host), MPI_CHAR, 0, 1, MPI_COMM_WORLD);
+      printInfo();
    }
 
    // 3. Parse command-line options.
-   const char *mesh_file = "../../data/inline-quad.mesh";
+   const char *mesh_file = "../../mfem/data/inline-quad.mesh";
    const char *ref_file  = "";
    int order = 1;
    int ref_levels = 0;
@@ -190,7 +156,7 @@ int main(int argc, char *argv[])
    ParGridFunction x_u(spaces[0]);
    ParGridFunction x_p(spaces[1]);
 
-   LibVectorCoefficient sol(dim, lib_file, "sol");
+   LibVectorCoefficient sol(dim, lib_file, "sol_u");
    x_u.ProjectCoefficient(sol);
    x_p = 0.0;
 
@@ -203,7 +169,6 @@ int main(int argc, char *argv[])
    visit_dc.RegisterField("p", &x_p);
    visit_dc.SetCycle(0);
    visit_dc.Save();
-
 
    // 7. Define the time stepping algorithm
    // Set up the preconditioner
@@ -238,7 +203,7 @@ int main(int argc, char *argv[])
 
    // 7. Define the weka form
    // Define the physical parameters
-   LibCoefficient mu(lib_file, "mu", mu_param);
+   LibCoefficient mu(lib_file, "mu", false, mu_param);
    LibVectorCoefficient force(dim, lib_file, "force");
 
    // Define the stabilisation parameters
@@ -248,9 +213,11 @@ int main(int argc, char *argv[])
    RBVMS::FF91Delta delta(&adv, &mu );
 
    // Define evolution
-   RBVMS::Evolution evo(spaces, ess_bdr, newton_solver,
-                        new RBVMS::IncNavStoIntegrator(mu, force,
-                                                       tau, tau, tau));
+   RBVMS::IncNavStoForm form(spaces,
+                             mu, force,
+                             tau, tau, tau);
+
+   RBVMS::Evolution evo(form, newton_solver);
 
    // Select the time integrator
    ODESolver *ode_solver = NULL;

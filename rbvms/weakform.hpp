@@ -18,8 +18,12 @@ namespace RBVMS
 /** Residual-based Variational multiscale integrator
     for incompressible Navier-Stokes flow
 
+
+   This is a frankenstein ParBlockNonlinearForm BlockNonlinearFormIntegrator
+
 */
-class IncNavStoIntegrator : public BlockNonlinearFormIntegrator
+
+class IncNavStoForm : public ParBlockNonlinearForm
 {
 private:
 
@@ -36,43 +40,76 @@ private:
    Array2D<int> hmap;
 
    /// Physical values
-   Vector u, f, grad_p, res, up;
-   DenseMatrix flux;
+   mutable Vector u, dudt, f, grad_p, res, up;
+   mutable DenseMatrix flux;
 
    /// Solution & Residual vector
-   Vector u0;
-   DenseMatrix elf_u, elv_u;
+   mutable Vector x0, x;
+   mutable DenseMatrix elf_u, elf_du, elv_u;
 
    /// Shape function data
-   Vector sh_u, ushg_u, sh_p;
-   DenseMatrix shg_u, shh_u, shg_p, grad_u, hess_u;
+   mutable Vector sh_u, ushg_u, sh_p;
+   mutable DenseMatrix shg_u, shh_u, shg_p, grad_u, hess_u;
+
+   ///
+   mutable BlockVector dxs;
+   mutable BlockVector dxs_true;
 
 public:
    /// Constructor
-   IncNavStoIntegrator(Coefficient &mu_,
-                       VectorCoefficient &force_,
-                       Tau &tau_m, Tau &tau_c, Tau &tau_b);
+   IncNavStoForm(Array<ParFiniteElementSpace *> &pfes,
+                 Coefficient &mu_,
+                 VectorCoefficient &force_,
+                 Tau &tau_m, Tau &tau_c, Tau &tau_b);
 
    // Set the solution
    void SetSolution(const real_t dt,
                     const Vector &u0);
 
+   //------------------------------------------------
+   // NonlinearForm memberfunctions
+   //------------------------------------------------
+   /// Specialized version of GetEnergy() for BlockVectors
+   //real_t GetEnergyBlocked(const BlockVector &bx) const;
+
+   /// Block T-Vector to Block T-Vector
+   void Mult(const Vector &x, Vector &y) const;
+
+   /// Specialized version of Mult() for BlockVector%s
+   /// Block L-Vector to Block L-Vector
+   void MultBlocked(const BlockVector &bx,
+                    const BlockVector &dbx,
+                          BlockVector &by) const;
+
+   /// Return the local block gradient matrix for the given true-dof vector x
+   const BlockOperator& GetLocalGradient(const Vector &x) const;
+
+   /// Specialized version of GetGradient() for BlockVector
+   void ComputeGradientBlocked(const BlockVector &bx,
+                               const BlockVector &dbx) const;
+
+   //------------------------------------------------
+   // Integrator memberfunctions
+   //------------------------------------------------
    /// Assemble the local energy
-   virtual real_t GetElementEnergy(const Array<const FiniteElement *>&el,
-                                   ElementTransformation &Tr,
-                                   const Array<const Vector *> &elfun);
+   real_t GetElementEnergy(const Array<const FiniteElement *>&el,
+                           ElementTransformation &Tr,
+                           const Array<const Vector *> &elfun,
+                           const Array<const Vector *> &elrate) const;
 
    /// Assemble the local residual vectors
-   virtual void AssembleElementVector(const Array<const FiniteElement *> &el,
-                                      ElementTransformation &Tr,
-                                      const Array<const Vector *> &elfun,
-                                      const Array<Vector *> &elvec);
+   void AssembleElementVector(const Array<const FiniteElement *> &el,
+                              ElementTransformation &Tr,
+                              const Array<const Vector *> &elsol,
+                              const Array<const Vector *> &elrate,
+                              const Array<Vector *> &elvec) const;
 
    /// Assemble the local gradient matrices
-   virtual void AssembleElementGrad(const Array<const FiniteElement*> &el,
-                                    ElementTransformation &Tr,
-                                    const Array<const Vector *> &elfun,
-                                    const Array2D<DenseMatrix *> &elmats);
+   void AssembleElementGrad(const Array<const FiniteElement*> &el,
+                            ElementTransformation &Tr,
+                            const Array<const Vector *> &elsol,
+                            const Array<const Vector *> &elrate,
+                            const Array2D<DenseMatrix *> &elmats) const;
 };
 
 } // namespace RBVMS

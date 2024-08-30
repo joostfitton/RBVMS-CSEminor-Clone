@@ -19,7 +19,8 @@ LibCoefficient::LibCoefficient(string libName,
       {
          mfem_error("Can not obtain required function.\n");
       }
-      cout<<"Function "<<funName<<" will be set to val = "<<val<< endl;
+      cout<<"Function will be set to default"<<endl;
+      cout<<funName<<" = "<<val<< endl;
       return;
    }
 
@@ -32,7 +33,8 @@ LibCoefficient::LibCoefficient(string libName,
       {
          mfem_error("Can not obtain required function.\n");
       }
-      cout<<"Function will be set to val = "<<val<< endl;
+      cout<<"Function will be set to default"<<endl;
+      cout<<funName<<" = "<<val<< endl;
    }
 }
 

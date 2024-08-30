@@ -9,6 +9,9 @@ opt/*
 install/*
 bin/*
 
+# Build directories
+examples/navsto_*
+
 # Prerequisites
 *.d
 
