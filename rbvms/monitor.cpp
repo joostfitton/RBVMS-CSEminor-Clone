@@ -46,9 +46,13 @@ void GeneralResidualMonitor::MonitorResidual(int it, real_t norm,
 
    if ((print_level > 0 &&  it%print_level == 0) || final)
    {
-      mfem::out << prefix << " iteration " << std::setw(2) << it
-                << " : ||r|| = " << norm
-                << ",  ||r||/||r_0|| = " << 100*norm/norm0<<" % \n";
+      mfem::out<<prefix<<" iteration "<<std::setw(2)<<it
+               <<" : ||r|| = "
+               <<std::setw(8)<<std::defaultfloat<<std::setprecision(4)
+               <<norm
+               <<",  ||r||/||r_0|| = "
+               <<std::setw(6)<<std::fixed<<std::setprecision(2)
+               <<100*norm/norm0<<" %\n";
    }
 }
 
@@ -156,7 +160,10 @@ void SystemResidualMonitor::MonitorResidual(int it, real_t norm,
                 << " ||r||  \t"<< "||r||/||r_0||  \n";
       for (int i = 0; i < nvar; ++i)
       {
-         mfem::out <<vnorm[i]<<"\t"<< 100*vnorm[i]/norm0[i]<<" % \n";
+         mfem::out<<std::setw(8)<<std::defaultfloat<<std::setprecision(4)
+                  <<vnorm[i]<<"\t"
+                  <<std::setw(6)<<std::fixed<<std::setprecision(2)
+                  <<100*vnorm[i]/norm0[i]<<" % \n";
       }
    }
 }
