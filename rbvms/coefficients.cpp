@@ -6,9 +6,9 @@ using namespace mfem;
 
 /// Constructor
 LibCoefficient::LibCoefficient(string libName,
-                                               string funName,
-                                               bool required,
-                                               real_t val) : val(val)
+                               string funName,
+                               bool required,
+                               real_t val) : val(val)
 {
    // Open library
    libHandle = dlopen (libName.c_str(), RTLD_LAZY);
@@ -40,9 +40,9 @@ LibCoefficient::LibCoefficient(string libName,
 
 /// class for C-function coefficient in seperate library
 LibCoefficient::LibCoefficient(string libName,
-                                               vector<string> funNames,
-                                               bool required,
-                                               real_t val) : val(val)
+                               vector<string> funNames,
+                               bool required,
+                               real_t val) : val(val)
 {
    // Open library
    libHandle = dlopen (libName.c_str(), RTLD_LAZY);
@@ -108,11 +108,11 @@ LibCoefficient::~LibCoefficient()
 
 
 /// Constructor
-LibVectorCoefficient::
-   LibVectorCoefficient(int vdim,
-                                string libName,
-                                string funName,
-                                bool required) : VectorCoefficient(vdim)
+LibVectorCoefficient::LibVectorCoefficient(int vdim,
+                                           string libName,
+                                           string funName,
+                                           bool required) 
+  : VectorCoefficient(vdim)
 {
    // Open library
    libHandle = dlopen (libName.c_str(), RTLD_LAZY);
@@ -142,11 +142,11 @@ LibVectorCoefficient::
 }
 
 /// class for C-function coefficient in seperate library
-LibVectorCoefficient::
-   LibVectorCoefficient(int vdim,
-                                string libName,
-                                vector<string> funNames,
-                                bool required) : VectorCoefficient(vdim)
+LibVectorCoefficient::LibVectorCoefficient(int vdim,
+                                           string libName,
+                                           vector<string> funNames,
+                                           bool required)
+  : VectorCoefficient(vdim)
 {
    // Open library
    libHandle = dlopen (libName.c_str(), RTLD_LAZY);
@@ -194,8 +194,8 @@ LibVectorCoefficient::
 
 /// Evaluate coefficient
 void LibVectorCoefficient::Eval(Vector &V,
-                                        ElementTransformation &T,
-                                        const IntegrationPoint &ip)
+                                ElementTransformation &T,
+                                const IntegrationPoint &ip)
 {
    // Homegenous if not defined
    if (!TDFunction)

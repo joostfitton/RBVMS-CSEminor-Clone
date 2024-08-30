@@ -82,7 +82,7 @@ public:
    /// Block L-Vector to Block L-Vector
    void MultBlocked(const BlockVector &bx,
                     const BlockVector &dbx,
-                          BlockVector &by) const;
+                    BlockVector &by) const;
 
    /// Return the local block gradient matrix for the given true-dof vector x
    const BlockOperator& GetLocalGradient(const Vector &x) const;

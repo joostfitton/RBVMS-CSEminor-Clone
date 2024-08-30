@@ -92,7 +92,7 @@ void IncNavStoForm::Mult(const Vector &dx, Vector &y) const
 
 void IncNavStoForm::MultBlocked(const BlockVector &bx,
                                 const BlockVector &bdx,
-                                      BlockVector &by) const
+                                BlockVector &by) const
 {
    Array<Array<int> *>vdofs(fes.Size());
    Array<Array<int> *>vdofs2(fes.Size());

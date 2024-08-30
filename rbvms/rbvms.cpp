@@ -117,12 +117,12 @@ int main(int argc, char *argv[])
       tdof = 0;
       tdof[myid] = spaces[0]->TrueVSize();
       MPI_Reduce(tdof.GetData(), udof.GetData(), num_procs,
-                  MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+                 MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
 
       tdof = 0;
       tdof[myid] = spaces[1]->TrueVSize();
       MPI_Reduce(tdof.GetData(), pdof.GetData(), num_procs,
-                  MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+                 MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
 
       if (myid == 0)
       {
