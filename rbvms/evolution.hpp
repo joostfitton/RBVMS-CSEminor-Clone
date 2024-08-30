@@ -21,6 +21,7 @@ class Evolution : public TimeDependentOperator
 private:
    IncNavStoForm &form;
    Solver &solver;
+   Vector dudt;
 
 public:
    Evolution(IncNavStoForm &form,

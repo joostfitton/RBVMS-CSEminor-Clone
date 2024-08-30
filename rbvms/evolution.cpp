@@ -13,16 +13,17 @@ using namespace RBVMS;
 Evolution::Evolution(IncNavStoForm &form,
                      Solver &solver)
    : TimeDependentOperator(form.Width(), 0.0, IMPLICIT),
-     form(form), solver(solver)
+     form(form), solver(solver), dudt(form.Width());
 {
    solver.SetOperator(form);
+   dudt = 0.0; 
 }
 
 void Evolution::ImplicitSolve(const real_t dt,
-                              const Vector &u0, Vector &dudt)
+                              const Vector &u0, Vector &dudt_)
 {
    form.SetSolution(dt, u0);
    Vector zero;
-   dudt = 0.0; // if?? TBD
    solver.Mult(zero, dudt);
+   dudt_ = dudt;
 }
