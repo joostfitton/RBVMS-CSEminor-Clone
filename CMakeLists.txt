@@ -46,7 +46,10 @@ ExternalProject_Add(hypre
 ExternalProject_Add(mfem
                     PREFIX ${INSTALL_DIR}
                     DEPENDS hypre
-                    CMAKE_ARGS -DMFEM_USE_MPI=Yes -DHYPRE_DIR=${INSTALL_DIR} -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}
+                    CMAKE_ARGS -DMFEM_USE_MPI=Yes
+                               -DHYPRE_DIR=${INSTALL_DIR}
+                               -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}
+                               -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                     SOURCE_DIR ${PROJECT_SOURCE_DIR}/mfem
                     BINARY_DIR ${PROJECT_BINARY_DIR}/mfem)
 
@@ -56,6 +59,8 @@ ExternalProject_Add(mfem
 ExternalProject_Add(rbvms
                     PREFIX ${INSTALL_DIR}
                     DEPENDS mfem
-                    CMAKE_ARGS -DMFEM_DIR=${INSTALL_DIR} -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}
+                    CMAKE_ARGS -DMFEM_DIR=${INSTALL_DIR}
+                               -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}
+                               -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                     SOURCE_DIR ${PROJECT_SOURCE_DIR}/rbvms
                     BINARY_DIR ${PROJECT_BINARY_DIR}/rbvms)
