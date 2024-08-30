@@ -10,10 +10,9 @@
 using namespace mfem;
 using namespace RBVMS;
 
-//--------------------------------------------------------------------------
 Evolution::Evolution(IncNavStoForm &form,
                      Solver &solver)
-   : TimeDependentOperator(0, 0.0, IMPLICIT),
+   : TimeDependentOperator(form.Width(), 0.0, IMPLICIT),
      form(form), solver(solver)
 {
    solver.SetOperator(form);
@@ -24,8 +23,6 @@ void Evolution::ImplicitSolve(const real_t dt,
 {
    form.SetSolution(dt, u0);
    Vector zero;
+   dudt = 0.0; // if?? TBD
    solver.Mult(zero, dudt);
 }
-
-
-

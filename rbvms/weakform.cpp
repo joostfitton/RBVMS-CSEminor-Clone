@@ -53,6 +53,7 @@ void IncNavStoForm::SetSolution(const real_t dt_,
 {
    dt = dt_;
    x0 = x0_;
+   x.SetSize(x0.Size());
 }
 
 void IncNavStoForm::Mult(const Vector &dx, Vector &y) const
@@ -75,7 +76,6 @@ void IncNavStoForm::Mult(const Vector &dx, Vector &y) const
       fes[s]->GetProlongationMatrix()->Mult(
          dxs_true.GetBlock(s), dxs.GetBlock(s));
    }
-
    MultBlocked(xs, dxs, ys);
 
    for (int s=0; s<fes.Size(); ++s)
@@ -439,7 +439,7 @@ void IncNavStoForm::AssembleElementVector(
       AddMult_a_VWt(-w, sh_u, f,    elv_u);  // Add force term to rhs
 
       // Compute momentum weak residual
-      elvec[1]->Add(w*grad_u.Trace(), sh_p); // Add Galerkin term
+      elvec[1]->Add(w*grad_u.Trace(), sh_p); // Add Galerkin term// ERRROR
       shg_p.Mult(res, sh_p);                 // PSPG help term
       elvec[1]->Add(w*tm, sh_p);              // Add PSPG term  - sign looks worng?
    }

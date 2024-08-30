@@ -83,6 +83,7 @@ int main(int argc, char *argv[])
    Mesh mesh(mesh_file, 1, 1);
    int dim = mesh.Dimension();
 
+   // Refine
    {
       if (mesh.NURBSext && (strlen(ref_file) != 0))
       {
@@ -95,6 +96,8 @@ int main(int argc, char *argv[])
       }
       if (myid == 0) { mesh.PrintInfo(); }
    }
+
+   // Partition
    ParMesh pmesh(MPI_COMM_WORLD, mesh);
    mesh.Clear();
 
@@ -113,13 +116,13 @@ int main(int argc, char *argv[])
       Array<int> tdof(num_procs),udof(num_procs),pdof(num_procs);
       tdof = 0;
       tdof[myid] = spaces[0]->TrueVSize();
-      MPI_Reduce(tdof.GetData(), udof.GetData(), num_procs, MPI_INT, MPI_MAX, 0,
-                 MPI_COMM_WORLD);
+      MPI_Reduce(tdof.GetData(), udof.GetData(), num_procs,
+                  MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
 
       tdof = 0;
       tdof[myid] = spaces[1]->TrueVSize();
-      MPI_Reduce(tdof.GetData(), pdof.GetData(), num_procs, MPI_INT, MPI_MAX, 0,
-                 MPI_COMM_WORLD);
+      MPI_Reduce(tdof.GetData(), pdof.GetData(), num_procs,
+                  MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
 
       if (myid == 0)
       {
@@ -216,6 +219,9 @@ int main(int argc, char *argv[])
    RBVMS::IncNavStoForm form(spaces,
                              mu, force,
                              tau, tau, tau);
+   Array<Vector *> rhs(2);
+   rhs = nullptr; // Set all entries in the array
+   form.SetEssentialBC(ess_bdr, rhs);
 
    RBVMS::Evolution evo(form, newton_solver);
 
@@ -236,6 +242,7 @@ int main(int argc, char *argv[])
          cout << "Unknown ODE solver type: " << ode_solver_type << '\n';
          mfem_error("Can not continue");
    }
+   cout << "ODE solver type: " << ode_solver_type << '\n';
    ode_solver->Init(evo);
 
    // 9. Actual time integration
