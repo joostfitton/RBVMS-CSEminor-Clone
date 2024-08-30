@@ -18,9 +18,12 @@ namespace RBVMS
 /** Residual-based Variational multiscale integrator
     for incompressible Navier-Stokes flow
 
+    This is a specialized ParBlockNonlinearForm that includes timestepping
+    interpolation, vis:
+       add(x0,dt,dx,x);   // x = x0 + dt*dx
 
-   This is a frankenstein ParBlockNonlinearForm BlockNonlinearFormIntegrator
-
+    Both x and dx need to be passed to the FormIntegrator.
+    To avoid defining these interfaces this class is subsumed.
 */
 
 class IncNavStoForm : public ParBlockNonlinearForm
