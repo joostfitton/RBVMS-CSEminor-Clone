@@ -8,25 +8,25 @@ cmake_minimum_required(VERSION 3.8)
 project(RBVMS LANGUAGES CXX C)
 
 #-------------------------------------------------------------------------------
-# Add MPI
+# Add Files
 #-------------------------------------------------------------------------------
-list(APPEND SOURCES
-     coefficients.cpp
-     evolution.cpp
-     monitor.cpp
-     precon.cpp
-     tau.cpp
-     weakform.cpp
-     printInfo.cpp)
+set(SOURCES
+    coefficients.cpp
+    evolution.cpp
+    monitor.cpp
+    precon.cpp
+    tau.cpp
+    weakform.cpp
+    printInfo.cpp)
 
-list(APPEND HEADERS
-     coefficients.hpp
-     evolution.hpp
-     monitor.hpp
-     precon.hpp
-     tau.hpp
-     weakform.hpp
-     buildInfo.hpp)
+set(HEADERS
+    coefficients.hpp
+    evolution.hpp
+    monitor.hpp
+    precon.hpp
+    tau.hpp
+    weakform.hpp
+    buildInfo.hpp)
 
 #-------------------------------------------------------------------------------
 # Create header
@@ -38,7 +38,7 @@ if (${tmp1} STREQUAL ${tmp2})
   message(STATUS "Report RBVMS, MFEM and hypre in build info.")
   add_custom_command(OUTPUT buildInfo.hpp
                      PRE_BUILD
-                     COMMAND /bin/bash 
+                     COMMAND /bin/bash
                              "${PROJECT_SOURCE_DIR}/../config/buildInfo.sh"
                              "${PROJECT_SOURCE_DIR}" "mfem" "hypre"
                      COMMENT "Getting git info")

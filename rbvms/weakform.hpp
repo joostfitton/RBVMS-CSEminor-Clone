@@ -1,8 +1,9 @@
-// This file is part of the RBVMS application. For more information and source code
-// availability visit https://idoakkerman.github.io/
+// This file is part of the RBVMS application. For more information and source
+// code availability visit https://idoakkerman.github.io/
 //
 // RBVMS is free software; you can redistribute it and/or modify it under the
 // terms of the BSD-3 license.
+//------------------------------------------------------------------------------
 
 #ifndef RBVMS_NAVSTO_HPP
 #define RBVMS_NAVSTO_HPP
