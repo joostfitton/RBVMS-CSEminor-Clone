@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
    const char *lib_file = "libfun.so";
 
-   int ode_solver_type = 22;
+   int ode_solver_type = 11;
    real_t dt = 0.1;
    real_t t_final = 1.0;
    int vis_steps = 1;
@@ -254,12 +254,14 @@ int main(int argc, char *argv[])
       real_t dt_real = min(dt, t_final - t);
       ode_solver->Step(xp, t, dt_real);
       ti++;
-
       done = (t >= t_final - 1e-8*dt);
 
       if (done || ti % vis_steps == 0)
       {
          cout << "time step: " << ti << ", time: " << t << endl;
+
+         x_u.Distribute(xp.GetBlock(0));
+         x_p.Distribute(xp.GetBlock(1));
 
          visit_dc.SetCycle(ti);
          visit_dc.SetTime(t);
