@@ -51,8 +51,8 @@ int main(int argc, char *argv[])
    const char *lib_file = "libfun.so";
 
    int ode_solver_type = 11;
-   real_t dt = 0.1;
-   real_t t_final = 1.0;
+   real_t dt = 0.01;
+   real_t t_final = 10.0;
    int vis_steps = 1;
 
    OptionsParser args(argc, argv);
@@ -71,6 +71,13 @@ int main(int argc, char *argv[])
 
    args.AddOption(&mu_param, "-m", "--mu",
                   "Sets the diffusion parameters, should be positive.");
+
+   args.AddOption(&ode_solver_type, "-s", "--ode-solver",
+                  "...");
+   args.AddOption(&t_final, "-tf", "--t-final",
+                  "Final time; start time is 0.");
+   args.AddOption(&dt, "-dt", "--time-step",
+                  "Time step.");
 
    args.Parse();
    if (!args.Good())
@@ -194,7 +201,7 @@ int main(int argc, char *argv[])
    // Set up the newton solver
    Array<ParGridFunction *> pgf_array({&x_u, &x_p});
    RBVMS::SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,"Newton", 1,
-                                               bOffsets, &visit_dc, &xp,
+                                               bOffsets, nullptr, &xp,
                                                pgf_array);
    NewtonSolver newton_solver(MPI_COMM_WORLD);
    newton_solver.iterative_mode = true;
@@ -251,6 +258,10 @@ int main(int argc, char *argv[])
    bool done = false;
    for (int ti = 0; !done; )
    {
+      cout<<"----------------------------------------\n";
+      cout << "time step: " << ti << ", time: " << t << endl;
+      cout<<"----------------------------------------\n";
+
       real_t dt_real = min(dt, t_final - t);
       ode_solver->Step(xp, t, dt_real);
       ti++;
@@ -258,7 +269,9 @@ int main(int argc, char *argv[])
 
       if (done || ti % vis_steps == 0)
       {
-         cout << "time step: " << ti << ", time: " << t << endl;
+         cout<<"\n\n";
+         cout << "Visit output: Cycle " << ti << "\t Time: " << t << endl;
+         cout<<"\n\n";
 
          x_u.Distribute(xp.GetBlock(0));
          x_p.Distribute(xp.GetBlock(1));
