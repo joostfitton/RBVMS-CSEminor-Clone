@@ -481,6 +481,7 @@ void IncNavStoForm::AssembleElementVector(
 
       // Compute strong residual
       grad_u.Mult(u,res);   // Add convection
+      res += dudt;          // Add acceleration
       res += grad_p;        // Add pressure
       res -= f;             // Subtract force
       for (int i = 0; i < dim; ++i)
@@ -498,18 +499,19 @@ void IncNavStoForm::AssembleElementVector(
 
       // Compute momentum weak residual
       flux.Diag(-p + tc*grad_u.Trace(),dim);  // Add pressure & LSIC to flux
-      grad_u.Symmetrize();                   // Grad to strain
-      flux.Add(2*mu,grad_u);                 // Add stress to flux
-      AddMult_a_VVt(-1.0, u, flux);          // Add convection to flux
+      grad_u.Symmetrize();                    // Grad to strain
+      flux.Add(2*mu,grad_u);                  // Add stress to flux
+      AddMult_a_VVt(-1.0, u, flux);           // Add convection to flux
       AddMult_a_VWt(tm, res, u,
                     flux);        // Add SUPG to flux --> check order u and res
       AddMult_a_ABt(w, shg_u, flux, elv_u);  // Add flux term to rhs
-      AddMult_a_VWt(-w, sh_u, f,    elv_u);  // Add force term to rhs
+      f -= dudt;                             // Add Acceleration to force
+      AddMult_a_VWt(-w, sh_u, f,    elv_u);  // Add force + acc term to rhs
 
       // Compute momentum weak residual
-      elvec[1]->Add(w*grad_u.Trace(), sh_p); // Add Galerkin term// ERRROR
+      elvec[1]->Add(w*grad_u.Trace(), sh_p); // Add Galerkin term
       shg_p.Mult(res, sh_p);                 // PSPG help term
-      elvec[1]->Add(w*tm, sh_p);              // Add PSPG term  - sign looks worng?
+      elvec[1]->Add(w*tm, sh_p);             // Add PSPG term  - sign looks worng?
    }
 }
 
@@ -551,7 +553,7 @@ void IncNavStoForm::AssembleElementGrad(
    {
       const IntegrationPoint &ip = ir.IntPoint(i);
       Tr.SetIntPoint(&ip);
-      real_t w = dt*ip.weight * Tr.Weight();
+      real_t w = ip.weight * Tr.Weight();
 
       real_t mu = c_mu.Eval(Tr, ip);
       real_t tm = tau_m.Eval(Tr, ip);
@@ -583,11 +585,14 @@ void IncNavStoForm::AssembleElementGrad(
             {
                mat += shg_u(i_u,dim_u)*shg_u(j_u,dim_u);
             }
-            mat *= mu;
+            mat *= mu*dt;
+
+            // Acceleration
+            mat += sh_u(i_u)*sh_u(j_u);
 
             // Convection
-            mat -= ushg_u(i_u)*sh_u(j_u);      // Galerkin
-            mat += tm*ushg_u(i_u)*ushg_u(j_u);  // SUPG
+            mat -= ushg_u(i_u)*sh_u(j_u)*dt;       // Galerkin
+            mat += tm*ushg_u(i_u)*ushg_u(j_u)*dt;  // SUPG
 
             mat *= w;
             for (int dim_u = 0; dim_u < dim; ++dim_u)
@@ -600,7 +605,7 @@ void IncNavStoForm::AssembleElementGrad(
                for (int j_dim = 0; j_dim < dim; ++j_dim)
                {
                   (*elmats(0,0))(i_u + i_dim*dof_u, j_u + j_dim*dof_u) +=
-                     (mu + tc)*shg_u(i_u,j_dim)*shg_u(j_u,i_dim)*w;
+                     (mu + tc)*shg_u(i_u,j_dim)*shg_u(j_u,i_dim)*w*dt;
                }
             }
          }
@@ -614,13 +619,13 @@ void IncNavStoForm::AssembleElementGrad(
             for (int dim_u = 0; dim_u < dim; ++dim_u)
             {
                (*elmats(0,1))(j_u + dof_u * dim_u, i_p) += (shg_p(i_p, dim_u)*tm*ushg_u(j_u)
-                                                            -shg_u(j_u,dim_u)*sh_p(i_p))*w;
-               (*elmats(1,0))(i_p, j_u + dof_u * dim_u) +=  shg_u(j_u,dim_u)*sh_p(i_p)*w;
+                                                            -shg_u(j_u,dim_u)*sh_p(i_p))*w*dt;
+               (*elmats(1,0))(i_p, j_u + dof_u * dim_u) +=  shg_u(j_u,dim_u)*sh_p(i_p)*w*dt;
             }
          }
       }
 
       // p,p block
-      AddMult_a_AAt(w*tm, shg_p, *elmats(1,1));
+      AddMult_a_AAt(w*tm*dt, shg_p, *elmats(1,1));
    }
 }
