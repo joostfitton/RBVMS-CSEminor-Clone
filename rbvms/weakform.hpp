@@ -85,6 +85,9 @@ public:
                     const BlockVector &dbx,
                     BlockVector &by) const;
 
+
+   virtual BlockOperator &GetGradient(const Vector &x) const;
+
    /// Return the local block gradient matrix for the given true-dof vector x
    const BlockOperator& GetLocalGradient(const Vector &x) const;
 

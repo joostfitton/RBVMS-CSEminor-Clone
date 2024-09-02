@@ -160,6 +160,73 @@ void IncNavStoForm::MultBlocked(const BlockVector &bx,
    by.SyncFromBlocks();
 }
 
+BlockOperator & IncNavStoForm::GetGradient(const Vector &x) const
+{
+   if (pBlockGrad == NULL)
+   {
+      pBlockGrad = new BlockOperator(block_trueOffsets);
+   }
+
+   Array<const ParFiniteElementSpace *> pfes(fes.Size());
+
+   for (int s1=0; s1<fes.Size(); ++s1)
+   {
+      pfes[s1] = ParFESpace(s1);
+
+      for (int s2=0; s2<fes.Size(); ++s2)
+      {
+         phBlockGrad(s1,s2)->Clear();
+      }
+   }
+
+   GetLocalGradient(x); // gradients are stored in 'Grads'
+
+   if (fnfi.Size() > 0)
+   {
+      MFEM_ABORT("TODO: assemble contributions from shared face terms");
+   }
+
+   for (int s1=0; s1<fes.Size(); ++s1)
+   {
+      for (int s2=0; s2<fes.Size(); ++s2)
+      {
+         OperatorHandle dA(phBlockGrad(s1,s2)->Type()),
+                        Ph(phBlockGrad(s1,s2)->Type()),
+                        Rh(phBlockGrad(s1,s2)->Type());
+
+         if (s1 == s2)
+         {
+            dA.MakeSquareBlockDiag(pfes[s1]->GetComm(), pfes[s1]->GlobalVSize(),
+                                   pfes[s1]->GetDofOffsets(), Grads(s1,s1));
+            Ph.ConvertFrom(pfes[s1]->Dof_TrueDof_Matrix());
+            phBlockGrad(s1,s1)->MakePtAP(dA, Ph);
+
+            OperatorHandle Ae;
+            Ae.EliminateRowsCols(*phBlockGrad(s1,s1), *ess_tdofs[s1]);
+         }
+         else
+         {
+            dA.MakeRectangularBlockDiag(pfes[s1]->GetComm(),
+                                        pfes[s1]->GlobalVSize(),
+                                        pfes[s2]->GlobalVSize(),
+                                        pfes[s1]->GetDofOffsets(),
+                                        pfes[s2]->GetDofOffsets(),
+                                        Grads(s1,s2));
+            Rh.ConvertFrom(pfes[s1]->Dof_TrueDof_Matrix());
+            Ph.ConvertFrom(pfes[s2]->Dof_TrueDof_Matrix());
+
+            phBlockGrad(s1,s2)->MakeRAP(Rh, dA, Ph);
+
+            phBlockGrad(s1,s2)->EliminateRows(*ess_tdofs[s1]);
+            phBlockGrad(s1,s2)->EliminateCols(*ess_tdofs[s2]);
+         }
+
+         pBlockGrad->SetBlock(s1, s2, phBlockGrad(s1,s2)->Ptr());
+      }
+   }
+
+   return *pBlockGrad;
+}
 
 /// Return the local gradient matrix for the given true-dof vector x
 const BlockOperator & IncNavStoForm::GetLocalGradient(const Vector &dx) const
@@ -484,7 +551,8 @@ void IncNavStoForm::AssembleElementGrad(
    {
       const IntegrationPoint &ip = ir.IntPoint(i);
       Tr.SetIntPoint(&ip);
-      real_t w = ip.weight * Tr.Weight();
+      real_t w = dt*ip.weight * Tr.Weight();
+
       real_t mu = c_mu.Eval(Tr, ip);
       real_t tm = tau_m.Eval(Tr, ip);
       real_t tc = tau_c.Eval(Tr, ip);
