@@ -17,8 +17,12 @@ using namespace mfem;
 namespace RBVMS
 {
 
+// Predefine class
 class ParTimeDepBlockNonlinForm;
 
+/** This class provide the correct interface between the time-dependent 
+    block nonlinear form (defined below) and the MFEM::ODESolver.
+*/
 class Evolution : public TimeDependentOperator
 {
 private:
@@ -27,33 +31,29 @@ private:
    Vector dudt;
 
 public:
+   /// Constructor
    Evolution(ParTimeDepBlockNonlinForm &form,
              Solver &solver);
 
+   // Solve time dependent problem
    virtual void ImplicitSolve(const real_t dt,
                               const Vector &x,
                               Vector &k) override;
-
+   /// Destructor
    ~Evolution() {}
 };
 
 
-/** Residual-based Variational multiscale integrator
-    for incompressible Navier-Stokes flow
-
-    This is a specialized ParBlockNonlinearForm that includes timestepping
+/** This class is a specialized ParBlockNonlinearForm that includes timestepping
     interpolation, vis:
        add(x0,dt,dx,x);   // x = x0 + dt*dx
 
     Both x and dx need to be passed to the FormIntegrator.
-    To avoid defining these interfaces this class is subsumed.
 */
-
 class ParTimeDepBlockNonlinForm : public ParBlockNonlinearForm
 {
 private:
    RBVMS::IncNavStoIntegrator &integrator;
-
 
    /// Numerical parameters
    real_t dt;
@@ -68,9 +68,10 @@ public:
    ParTimeDepBlockNonlinForm(Array<ParFiniteElementSpace *> &pfes,
                              RBVMS::IncNavStoIntegrator &integrator);
 
-   // Set the solution
+   /// Set the solution of the previous time step @a x0
+   /// and the timestep size @a dt of the current solve.
    void SetSolution(const real_t dt,
-                    const Vector &u0);
+                    const Vector &x0);
 
    //------------------------------------------------
    // NonlinearForm memberfunctions
@@ -86,7 +87,6 @@ public:
    void MultBlocked(const BlockVector &bx,
                     const BlockVector &dbx,
                     BlockVector &by) const;
-
 
    virtual BlockOperator &GetGradient(const Vector &x) const;
 

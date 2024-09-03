@@ -10,6 +10,7 @@
 using namespace mfem;
 using namespace RBVMS;
 
+// Evolution Constructor
 Evolution::Evolution(ParTimeDepBlockNonlinForm &form,
                      Solver &solver)
    : TimeDependentOperator(form.Width(), 0.0, IMPLICIT),
@@ -19,6 +20,7 @@ Evolution::Evolution(ParTimeDepBlockNonlinForm &form,
    dudt = 0.0; 
 }
 
+// Solve time dependent problem
 void Evolution::ImplicitSolve(const real_t dt,
                               const Vector &u0, Vector &dudt_)
 {
@@ -28,7 +30,7 @@ void Evolution::ImplicitSolve(const real_t dt,
    dudt_ = dudt;
 }
 
-
+// Formulation Constructor
 ParTimeDepBlockNonlinForm::
    ParTimeDepBlockNonlinForm(Array<ParFiniteElementSpace *> &pfes,
                              RBVMS::IncNavStoIntegrator &integrator)
@@ -36,6 +38,8 @@ ParTimeDepBlockNonlinForm::
 {
 }
 
+// Set the solution of the previous time step
+// and the timestep size of the current solve.
 void ParTimeDepBlockNonlinForm::SetSolution(const real_t dt_,
                                             const Vector &x0_)
 {
@@ -45,6 +49,7 @@ void ParTimeDepBlockNonlinForm::SetSolution(const real_t dt_,
    integrator.SetTimeStep(dt);
 }
 
+// Block T-Vector to Block T-Vector
 void ParTimeDepBlockNonlinForm::Mult(const Vector &dx, Vector &y) const
 {
    // Get current solution
@@ -79,6 +84,7 @@ void ParTimeDepBlockNonlinForm::Mult(const Vector &dx, Vector &y) const
    y.SyncMemory(ys_true);
 }
 
+// Specialized version of Mult() for BlockVectors
 void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
                                             const BlockVector &bdx,
                                             BlockVector &by) const
@@ -148,6 +154,7 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
    by.SyncFromBlocks();
 }
 
+// Get Gradient
 BlockOperator & ParTimeDepBlockNonlinForm::GetGradient(const Vector &x) const
 {
    if (pBlockGrad == NULL)
@@ -216,7 +223,7 @@ BlockOperator & ParTimeDepBlockNonlinForm::GetGradient(const Vector &x) const
    return *pBlockGrad;
 }
 
-/// Return the local gradient matrix for the given true-dof vector x
+// Return the local gradient matrix for the given true-dof vector x
 const BlockOperator& ParTimeDepBlockNonlinForm
    ::GetLocalGradient(const Vector &dx) const
 {
@@ -253,6 +260,7 @@ const BlockOperator& ParTimeDepBlockNonlinForm
    return *BlockGrad;
 }
 
+// Specialized version of GetGradient() for BlockVector
 void ParTimeDepBlockNonlinForm
    ::ComputeGradientBlocked(const BlockVector &bx,
                             const BlockVector &bdx) const

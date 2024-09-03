@@ -16,8 +16,9 @@ using namespace mfem;
 namespace RBVMS
 {
 
-/** Residual-based Variational multiscale integrator
-    for incompressible Navier-Stokes flow
+/** This class defines a time-dependent integrator for the 
+    Residual-based Variational multiscale formulation
+    for incompressible Navier-Stokes flow.
 */
 class IncNavStoIntegrator
 {
@@ -52,7 +53,7 @@ public:
                        VectorCoefficient &force_,
                        Tau &tau);
 
-
+   /// set the timestep size @a dt
    void SetTimeStep(real_t &dt_) {dt = dt_; };
 
    /// Assemble the local energy
