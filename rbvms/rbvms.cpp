@@ -200,9 +200,9 @@ int main(int argc, char *argv[])
 
    // Set up the newton solver
    Array<ParGridFunction *> pgf_array({&x_u, &x_p});
-   RBVMS::SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,"Newton", 1,
-                                               bOffsets, nullptr, &xp,
-                                               pgf_array);
+   RBVMS::SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,
+                                               "Newton", 1,
+                                               bOffsets);
    NewtonSolver newton_solver(MPI_COMM_WORLD);
    newton_solver.iterative_mode = true;
    newton_solver.SetPrintLevel(-1);
