@@ -37,14 +37,14 @@ private:
 
    /// Numerical parameters
    real_t dt;
-   Tau &tau_m, &tau_c, &tau_b;
+   Tau &tau_m, &tau_b;
 
    /// Dimension data
    int dim = -1;
    Array2D<int> hmap;
 
    /// Physical values
-   mutable Vector u, dudt, f, grad_p, res, up;
+   mutable Vector u, dudt, f, grad_p, res_m, up;
    mutable DenseMatrix flux;
 
    /// Solution & Residual vector
@@ -64,7 +64,7 @@ public:
    IncNavStoForm(Array<ParFiniteElementSpace *> &pfes,
                  Coefficient &mu_,
                  VectorCoefficient &force_,
-                 Tau &tau_m, Tau &tau_c, Tau &tau_b);
+                 Tau &tau, Tau &tau_b);
 
    // Set the solution
    void SetSolution(const real_t dt,

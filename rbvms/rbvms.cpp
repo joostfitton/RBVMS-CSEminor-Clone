@@ -220,13 +220,12 @@ int main(int argc, char *argv[])
    // Define the stabilisation parameters
    VectorGridFunctionCoefficient adv(&x_u);
    // ElasticInverseEstimateCoefficient invEst(spaces[0]);
-   RBVMS::FFH92Tau tau(&adv, &mu,  4.0);
-   RBVMS::FF91Delta delta(&adv, &mu );
+   RBVMS::Tau tau(adv, mu);
 
    // Define evolution
    RBVMS::IncNavStoForm form(spaces,
                              mu, force,
-                             tau, tau, tau);
+                             tau, tau);
    Array<Vector *> rhs(2);
    rhs = nullptr; // Set all entries in the array
    form.SetEssentialBC(ess_bdr, rhs);
@@ -263,6 +262,7 @@ int main(int argc, char *argv[])
       cout<<"----------------------------------------\n";
 
       real_t dt_real = min(dt, t_final - t);
+      tau.SetTimeStep(dt_real);
       ode_solver->Step(xp, t, dt_real);
       ti++;
       done = (t >= t_final - 1e-8*dt);
