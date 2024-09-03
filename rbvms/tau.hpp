@@ -45,9 +45,9 @@ public:
        - @a adv the convection velocity
        - @a mu the diffusion coefficient*/
    Tau(VectorCoefficient &adv, Coefficient &mu,
-      real_t Cd = 36.0, real_t Ct = 4.0)
-     : VectorCoefficient(2), c_adv(adv), c_mu(mu),
-       Cd(Cd), Ct(Ct)
+       real_t Cd = 36.0, real_t Ct = 4.0)
+      : VectorCoefficient(2), c_adv(adv), c_mu(mu),
+        Cd(Cd), Ct(Ct)
    {
       dim = c_adv.GetVDim();
       u.SetSize(dim);

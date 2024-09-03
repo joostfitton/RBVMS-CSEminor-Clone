@@ -18,16 +18,8 @@ namespace RBVMS
 
 /** Residual-based Variational multiscale integrator
     for incompressible Navier-Stokes flow
-
-    This is a specialized ParBlockNonlinearForm that includes timestepping
-    interpolation, vis:
-       add(x0,dt,dx,x);   // x = x0 + dt*dx
-
-    Both x and dx need to be passed to the FormIntegrator.
-    To avoid defining these interfaces this class is subsumed.
 */
-
-class IncNavStoForm : public ParBlockNonlinearForm
+class IncNavStoIntegrator
 {
 private:
 
@@ -36,8 +28,8 @@ private:
    VectorCoefficient &c_force;
 
    /// Numerical parameters
-   real_t dt;
-   Tau &tau_m, &tau_b;
+   real_t dt = -1.0;
+   Tau &tau_m;
 
    /// Dimension data
    int dim = -1;
@@ -48,56 +40,21 @@ private:
    mutable DenseMatrix flux;
 
    /// Solution & Residual vector
-   mutable Vector x0, x;
    mutable DenseMatrix elf_u, elf_du, elv_u;
 
    /// Shape function data
-   mutable Vector sh_u, ushg_u, sh_p;
+   mutable Vector sh_u, ushg_u, sh_p, dupdu;
    mutable DenseMatrix shg_u, shh_u, shg_p, grad_u, hess_u;
-
-   ///
-   mutable BlockVector dxs;
-   mutable BlockVector dxs_true;
 
 public:
    /// Constructor
-   IncNavStoForm(Array<ParFiniteElementSpace *> &pfes,
-                 Coefficient &mu_,
-                 VectorCoefficient &force_,
-                 Tau &tau, Tau &tau_b);
-
-   // Set the solution
-   void SetSolution(const real_t dt,
-                    const Vector &u0);
-
-   //------------------------------------------------
-   // NonlinearForm memberfunctions
-   //------------------------------------------------
-   /// Specialized version of GetEnergy() for BlockVectors
-   //real_t GetEnergyBlocked(const BlockVector &bx) const;
-
-   /// Block T-Vector to Block T-Vector
-   void Mult(const Vector &x, Vector &y) const;
-
-   /// Specialized version of Mult() for BlockVector%s
-   /// Block L-Vector to Block L-Vector
-   void MultBlocked(const BlockVector &bx,
-                    const BlockVector &dbx,
-                    BlockVector &by) const;
+   IncNavStoIntegrator(Coefficient &mu_,
+                       VectorCoefficient &force_,
+                       Tau &tau);
 
 
-   virtual BlockOperator &GetGradient(const Vector &x) const;
+   void SetTimeStep(real_t &dt_) {dt = dt_; };
 
-   /// Return the local block gradient matrix for the given true-dof vector x
-   const BlockOperator& GetLocalGradient(const Vector &x) const;
-
-   /// Specialized version of GetGradient() for BlockVector
-   void ComputeGradientBlocked(const BlockVector &bx,
-                               const BlockVector &dbx) const;
-
-   //------------------------------------------------
-   // Integrator memberfunctions
-   //------------------------------------------------
    /// Assemble the local energy
    real_t GetElementEnergy(const Array<const FiniteElement *>&el,
                            ElementTransformation &Tr,

@@ -223,12 +223,12 @@ int main(int argc, char *argv[])
    RBVMS::Tau tau(adv, mu);
 
    // Define evolution
-   RBVMS::IncNavStoForm form(spaces,
-                             mu, force,
-                             tau, tau);
+   RBVMS::IncNavStoIntegrator integrator(mu, force, tau);
+   RBVMS::ParTimeDepBlockNonlinForm form(spaces, integrator);
    Array<Vector *> rhs(2);
    rhs = nullptr; // Set all entries in the array
    form.SetEssentialBC(ess_bdr, rhs);
+
 
    RBVMS::Evolution evo(form, newton_solver);
 

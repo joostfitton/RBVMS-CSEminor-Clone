@@ -10,12 +10,10 @@
 using namespace mfem;
 using namespace RBVMS;
 
-IncNavStoForm::IncNavStoForm(Array<ParFiniteElementSpace *> &pfes,
-                             Coefficient &mu,
-                             VectorCoefficient &force,
-                             Tau &tm, Tau &tb)
-   : ParBlockNonlinearForm(pfes),
-     c_mu(mu), c_force(force), tau_m(tm), tau_b(tb)
+IncNavStoIntegrator::IncNavStoIntegrator(Coefficient &mu,
+                                         VectorCoefficient &force,
+                                         Tau &tm)
+   : c_mu(mu), c_force(force), tau_m(tm)
 {
    dim = force.GetVDim();
    u.SetSize(dim);
@@ -49,323 +47,7 @@ IncNavStoForm::IncNavStoForm(Array<ParFiniteElementSpace *> &pfes,
    }
 }
 
-void IncNavStoForm::SetSolution(const real_t dt_,
-                                const Vector &x0_)
-{
-   dt = dt_;
-   x0 = x0_;
-   x.SetSize(x0.Size());
-}
-
-void IncNavStoForm::Mult(const Vector &dx, Vector &y) const
-{
-   // Get current solution
-   add(x0,dt,dx,x);   // x = x0 + dt*dx
-
-   // xs_true is not modified, so const_cast is okay
-   xs_true.Update(const_cast<Vector &>(x), block_trueOffsets);
-   dxs_true.Update(const_cast<Vector &>(dx), block_trueOffsets);
-   ys_true.Update(y, block_trueOffsets);
-   xs.Update(block_offsets);
-   dxs.Update(block_offsets);
-   ys.Update(block_offsets);
-
-   for (int s=0; s<fes.Size(); ++s)
-   {
-      fes[s]->GetProlongationMatrix()->Mult(
-         xs_true.GetBlock(s), xs.GetBlock(s));
-      fes[s]->GetProlongationMatrix()->Mult(
-         dxs_true.GetBlock(s), dxs.GetBlock(s));
-   }
-   MultBlocked(xs, dxs, ys);
-
-   for (int s=0; s<fes.Size(); ++s)
-   {
-      fes[s]->GetProlongationMatrix()->MultTranspose(
-         ys.GetBlock(s), ys_true.GetBlock(s));
-
-      ys_true.GetBlock(s).SetSubVector(*ess_tdofs[s], 0.0);
-   }
-
-   ys_true.SyncFromBlocks();
-   y.SyncMemory(ys_true);
-}
-
-void IncNavStoForm::MultBlocked(const BlockVector &bx,
-                                const BlockVector &bdx,
-                                BlockVector &by) const
-{
-   Array<Array<int> *>vdofs(fes.Size());
-   Array<Array<int> *>vdofs2(fes.Size());
-   Array<Vector *> el_x(fes.Size());
-   Array<const Vector *> el_x_const(fes.Size());
-   Array<Vector *> el_dx(fes.Size());
-   Array<const Vector *> el_dx_const(fes.Size());
-   Array<Vector *> el_y(fes.Size());
-   Array<const FiniteElement *> fe(fes.Size());
-   Array<const FiniteElement *> fe2(fes.Size());
-   ElementTransformation *T;
-   Array<DofTransformation *> doftrans(fes.Size()); doftrans = nullptr;
-   Mesh *mesh = fes[0]->GetMesh();
-
-   by.UseDevice(true);
-   by = 0.0;
-   by.SyncToBlocks();
-   for (int s=0; s<fes.Size(); ++s)
-   {
-      el_x_const[s] = el_x[s] = new Vector();
-      el_dx_const[s] = el_dx[s] = new Vector();
-      el_y[s] = new Vector();
-      vdofs[s] = new Array<int>;
-      vdofs2[s] = new Array<int>;
-   }
-
-   for (int i = 0; i < fes[0]->GetNE(); ++i)
-   {
-      T = fes[0]->GetElementTransformation(i);
-      for (int s = 0; s < fes.Size(); ++s)
-      {
-         doftrans[s] = fes[s]->GetElementVDofs(i, *(vdofs[s]));
-         fe[s] = fes[s]->GetFE(i);
-         bx.GetBlock(s).GetSubVector(*(vdofs[s]), *el_x[s]);
-         bdx.GetBlock(s).GetSubVector(*(vdofs[s]), *el_dx[s]);
-         if (doftrans[s])
-         {
-            doftrans[s]->InvTransformPrimal(*el_x[s]);
-            doftrans[s]->InvTransformPrimal(*el_dx[s]);
-         }
-      }
-
-      AssembleElementVector(fe, *T,
-                            el_x_const,
-                            el_dx_const,
-                            el_y);
-
-      for (int s=0; s<fes.Size(); ++s)
-      {
-         if (el_y[s]->Size() == 0) { continue; }
-         if (doftrans[s]) {doftrans[s]->TransformDual(*el_y[s]); }
-         by.GetBlock(s).AddElementVector(*(vdofs[s]), *el_y[s]);
-      }
-   }
-
-   for (int s=0; s<fes.Size(); ++s)
-   {
-      delete vdofs2[s];
-      delete vdofs[s];
-      delete el_y[s];
-      delete el_x[s];
-   }
-
-   by.SyncFromBlocks();
-}
-
-BlockOperator & IncNavStoForm::GetGradient(const Vector &x) const
-{
-   if (pBlockGrad == NULL)
-   {
-      pBlockGrad = new BlockOperator(block_trueOffsets);
-   }
-
-   Array<const ParFiniteElementSpace *> pfes(fes.Size());
-
-   for (int s1=0; s1<fes.Size(); ++s1)
-   {
-      pfes[s1] = ParFESpace(s1);
-
-      for (int s2=0; s2<fes.Size(); ++s2)
-      {
-         phBlockGrad(s1,s2)->Clear();
-      }
-   }
-
-   GetLocalGradient(x); // gradients are stored in 'Grads'
-
-   if (fnfi.Size() > 0)
-   {
-      MFEM_ABORT("TODO: assemble contributions from shared face terms");
-   }
-
-   for (int s1=0; s1<fes.Size(); ++s1)
-   {
-      for (int s2=0; s2<fes.Size(); ++s2)
-      {
-         OperatorHandle dA(phBlockGrad(s1,s2)->Type()),
-                        Ph(phBlockGrad(s1,s2)->Type()),
-                        Rh(phBlockGrad(s1,s2)->Type());
-
-         if (s1 == s2)
-         {
-            dA.MakeSquareBlockDiag(pfes[s1]->GetComm(), pfes[s1]->GlobalVSize(),
-                                   pfes[s1]->GetDofOffsets(), Grads(s1,s1));
-            Ph.ConvertFrom(pfes[s1]->Dof_TrueDof_Matrix());
-            phBlockGrad(s1,s1)->MakePtAP(dA, Ph);
-
-            OperatorHandle Ae;
-            Ae.EliminateRowsCols(*phBlockGrad(s1,s1), *ess_tdofs[s1]);
-         }
-         else
-         {
-            dA.MakeRectangularBlockDiag(pfes[s1]->GetComm(),
-                                        pfes[s1]->GlobalVSize(),
-                                        pfes[s2]->GlobalVSize(),
-                                        pfes[s1]->GetDofOffsets(),
-                                        pfes[s2]->GetDofOffsets(),
-                                        Grads(s1,s2));
-            Rh.ConvertFrom(pfes[s1]->Dof_TrueDof_Matrix());
-            Ph.ConvertFrom(pfes[s2]->Dof_TrueDof_Matrix());
-
-            phBlockGrad(s1,s2)->MakeRAP(Rh, dA, Ph);
-
-            phBlockGrad(s1,s2)->EliminateRows(*ess_tdofs[s1]);
-            phBlockGrad(s1,s2)->EliminateCols(*ess_tdofs[s2]);
-         }
-
-         pBlockGrad->SetBlock(s1, s2, phBlockGrad(s1,s2)->Ptr());
-      }
-   }
-
-   return *pBlockGrad;
-}
-
-/// Return the local gradient matrix for the given true-dof vector x
-const BlockOperator & IncNavStoForm::GetLocalGradient(const Vector &dx) const
-{
-   // Get current solution
-   add(x0,dt,dx,x);   // x = x0 + dt*dx
-
-   // xs_true is not modified, so const_cast is okay
-   xs_true.Update(const_cast<Vector &>(x), block_trueOffsets);
-   dxs_true.Update(const_cast<Vector &>(dx), block_trueOffsets);
-   xs.Update(block_offsets);
-   dxs.Update(block_offsets);
-
-   for (int s=0; s<fes.Size(); ++s)
-   {
-      fes[s]->GetProlongationMatrix()->Mult(
-         xs_true.GetBlock(s), xs.GetBlock(s));
-      fes[s]->GetProlongationMatrix()->Mult(
-         dxs_true.GetBlock(s), dxs.GetBlock(s));
-   }
-
-   // (re)assemble Grad without b.c. into 'Grads'
-   ComputeGradientBlocked(xs, dxs);
-
-   delete BlockGrad;
-   BlockGrad = new BlockOperator(block_offsets);
-
-   for (int i = 0; i < fes.Size(); ++i)
-   {
-      for (int j = 0; j < fes.Size(); ++j)
-      {
-         BlockGrad->SetBlock(i, j, Grads(i, j));
-      }
-   }
-   return *BlockGrad;
-}
-
-void IncNavStoForm::ComputeGradientBlocked(const BlockVector &bx,
-                                           const BlockVector &bdx) const
-{
-   const int skip_zeros = 0;
-   Array<Array<int> *> vdofs(fes.Size());
-   Array<Array<int> *> vdofs2(fes.Size());
-   Array<Vector *> el_x(fes.Size());
-   Array<const Vector *> el_x_const(fes.Size());
-   Array<Vector *> el_dx(fes.Size());
-   Array<const Vector *> el_dx_const(fes.Size());
-   Array2D<DenseMatrix *> elmats(fes.Size(), fes.Size());
-   Array<const FiniteElement *>fe(fes.Size());
-   Array<const FiniteElement *>fe2(fes.Size());
-   ElementTransformation * T;
-   Array<DofTransformation *> doftrans(fes.Size()); doftrans = nullptr;
-   Mesh *mesh = fes[0]->GetMesh();
-
-   for (int i=0; i<fes.Size(); ++i)
-   {
-      el_x_const[i] = el_x[i] = new Vector();
-      el_dx_const[i] = el_dx[i] = new Vector();
-      vdofs[i] = new Array<int>;
-      vdofs2[i] = new Array<int>;
-      for (int j=0; j<fes.Size(); ++j)
-      {
-         elmats(i,j) = new DenseMatrix();
-      }
-   }
-
-   for (int i=0; i<fes.Size(); ++i)
-   {
-      for (int j=0; j<fes.Size(); ++j)
-      {
-         if (Grads(i,j) != NULL)
-         {
-            *Grads(i,j) = 0.0;
-         }
-         else
-         {
-            Grads(i,j) = new SparseMatrix(fes[i]->GetVSize(),
-                                          fes[j]->GetVSize());
-         }
-      }
-   }
-
-   for (int i = 0; i < fes[0]->GetNE(); ++i)
-   {
-      T = fes[0]->GetElementTransformation(i);
-      for (int s = 0; s < fes.Size(); ++s)
-      {
-         fe[s] = fes[s]->GetFE(i);
-         doftrans[s] = fes[s]->GetElementVDofs(i, *vdofs[s]);
-         bx.GetBlock(s).GetSubVector(*vdofs[s], *el_x[s]);
-         bdx.GetBlock(s).GetSubVector(*vdofs[s], *el_dx[s]);
-         if (doftrans[s])
-         {
-            doftrans[s]->InvTransformPrimal(*el_x[s]);
-            doftrans[s]->InvTransformPrimal(*el_dx[s]);
-         }
-      }
-
-      AssembleElementGrad(fe, *T, el_x_const,el_dx_const, elmats);
-
-      for (int j=0; j<fes.Size(); ++j)
-      {
-         for (int l=0; l<fes.Size(); ++l)
-         {
-            if (elmats(j,l)->Height() == 0) { continue; }
-            if (doftrans[j] || doftrans[l])
-            {
-               TransformDual(doftrans[j], doftrans[l], *elmats(j,l));
-            }
-            Grads(j,l)->AddSubMatrix(*vdofs[j], *vdofs[l],
-                                     *elmats(j,l), skip_zeros);
-         }
-      }
-   }
-
-   if (!Grads(0,0)->Finalized())
-   {
-      for (int i=0; i<fes.Size(); ++i)
-      {
-         for (int j=0; j<fes.Size(); ++j)
-         {
-            Grads(i,j)->Finalize(skip_zeros);
-         }
-      }
-   }
-
-   for (int i=0; i<fes.Size(); ++i)
-   {
-      for (int j=0; j<fes.Size(); ++j)
-      {
-         delete elmats(i,j);
-      }
-      delete vdofs2[i];
-      delete vdofs[i];
-      delete el_x[i];
-   }
-}
-
-real_t IncNavStoForm::GetElementEnergy(
+real_t IncNavStoIntegrator::GetElementEnergy(
    const Array<const FiniteElement *>&el,
    ElementTransformation &Tr,
    const Array<const Vector *> &elsol,
@@ -373,7 +55,7 @@ real_t IncNavStoForm::GetElementEnergy(
 {
    if (el.Size() != 2)
    {
-      mfem_error("IncNavStoForm::GetElementEnergy"
+      mfem_error("IncNavStoIntegrator::GetElementEnergy"
                  " has incorrect block finite element space size!");
    }
    int dof_u = el[0]->GetDof();
@@ -402,7 +84,7 @@ real_t IncNavStoForm::GetElementEnergy(
    return energy;
 }
 
-void IncNavStoForm::AssembleElementVector(
+void IncNavStoIntegrator::AssembleElementVector(
    const Array<const FiniteElement *> &el,
    ElementTransformation &Tr,
    const Array<const Vector *> &elsol,
@@ -411,7 +93,7 @@ void IncNavStoForm::AssembleElementVector(
 {
    if (el.Size() != 2)
    {
-      mfem_error("IncNavStoForm::AssembleElementVector"
+      mfem_error("IncNavStoIntegrator::AssembleElementVector"
                  " has finite element space of incorrect block number");
    }
 
@@ -422,7 +104,7 @@ void IncNavStoForm::AssembleElementVector(
    bool hess = false;//(el[0]->GetDerivType() == (int) FiniteElement::HESS);
    if (dim != spaceDim)
    {
-      mfem_error("IncNavStoForm::AssembleElementVector"
+      mfem_error("IncNavStoIntegrator::AssembleElementVector"
                  " is not defined on manifold meshes");
    }
    elvec[0]->SetSize(dof_u*dim);
@@ -462,7 +144,6 @@ void IncNavStoForm::AssembleElementVector(
 
       el[0]->CalcPhysDShape(Tr, shg_u);
       shg_u.Mult(u, ushg_u);
-      MultAtB(elf_u, shg_u, grad_u);
 
       el[1]->CalcPhysShape(Tr, sh_p);
       real_t p = sh_p*(*elsol[1]);
@@ -471,6 +152,7 @@ void IncNavStoForm::AssembleElementVector(
       shg_p.MultTranspose(*elsol[1], grad_p);
 
       // Compute strong residual
+      MultAtB(elf_u, shg_u, grad_u);
       grad_u.Mult(u,res_m);   // Add convection
       res_m += dudt;          // Add acceleration
       res_m += grad_p;        // Add pressure
@@ -479,7 +161,7 @@ void IncNavStoForm::AssembleElementVector(
       if (hess)               // Add diffusion
       {
          el[0]->CalcPhysHessian(Tr,shh_u);
-         MultAtB(elf_u, shh_u, hess_u);  
+         MultAtB(elf_u, shh_u, hess_u);
          for (int i = 0; i < dim; ++i)
          {
             for (int j = 0; j < dim; ++j)
@@ -520,7 +202,7 @@ void IncNavStoForm::AssembleElementVector(
    }
 }
 
-void IncNavStoForm::AssembleElementGrad(
+void IncNavStoIntegrator::AssembleElementGrad(
    const Array<const FiniteElement*> &el,
    ElementTransformation &Tr,
    const Array<const Vector *> &elsol,
@@ -548,6 +230,7 @@ void IncNavStoForm::AssembleElementGrad(
    sh_u.SetSize(dof_u);
    shg_u.SetSize(dof_u, dim);
    ushg_u.SetSize(dof_u);
+   dupdu.SetSize(dof_u);
    sh_p.SetSize(dof_p);
    shg_p.SetSize(dof_p, dim);
 
@@ -563,7 +246,6 @@ void IncNavStoForm::AssembleElementGrad(
       real_t w = ip.weight * Tr.Weight();
 
       real_t mu = c_mu.Eval(Tr, ip);
-      tau_m.Eval(tau, Tr, ip);
 
       el[0]->CalcPhysShape(Tr, sh_u);
       elf_u.MultTranspose(sh_u, u);
@@ -580,7 +262,49 @@ void IncNavStoForm::AssembleElementGrad(
       el[1]->CalcPhysDShape(Tr, shg_p);
       shg_p.MultTranspose(*elsol[1], grad_p);
 
-      // u,u block
+      // Compute strong residual
+      MultAtB(elf_u, shg_u, grad_u);
+      grad_u.Mult(u,res_m);   // Add convection
+      res_m += dudt;          // Add acceleration
+      res_m += grad_p;        // Add pressure
+      res_m -= f;             // Subtract force
+
+      if (hess)               // Add diffusion
+      {
+         el[0]->CalcPhysHessian(Tr,shh_u);
+         MultAtB(elf_u, shh_u, hess_u);
+         for (int i = 0; i < dim; ++i)
+         {
+            for (int j = 0; j < dim; ++j)
+            {
+               res_m[j] -= mu*(hess_u(j,hmap(i,i)) +
+                               hess_u(i,hmap(j,i)));
+            }
+         }
+      }
+      else                   // No diffusion in strong residual
+      {
+         shh_u = 0.0;
+         hess_u = 0.0;
+      }
+
+      // Compute stability params
+      tau_m.Eval(tau, Tr, ip);
+
+      // Small scale reconstruction
+      up.Set(-tau[0],res_m);
+      u += up;
+
+      // Compute small scale jacobian
+      for (int j_u = 0; j_u < dof_u; ++j_u)
+      {
+         dupdu(j_u) = -tau[0]*(sh_u(j_u) + ushg_u(j_u)*dt);
+      }
+
+      // Recompute convective gradient
+      MultAtB(elf_u, shg_u, grad_u);
+
+      // Momentum - Velocity block (w,u)
       for (int i_u = 0; i_u < dof_u; ++i_u)
       {
          for (int j_u = 0; j_u < dof_u; ++j_u)
@@ -598,8 +322,7 @@ void IncNavStoForm::AssembleElementGrad(
 
             // Convection -- frozen convection
             mat -= ushg_u(i_u)*sh_u(j_u)*dt;           // Galerkin
-            mat += tau[0]*ushg_u(i_u)*ushg_u(j_u)*dt;  // SUPG - Conv
-            mat += tau[0]*ushg_u(i_u)*sh_u(j_u);       // SUPG - Acc
+            mat -= ushg_u(i_u)*dupdu(j_u);             // SUPG - Conv
 
             mat *= w;
             for (int dim_u = 0; dim_u < dim; ++dim_u)
@@ -618,21 +341,35 @@ void IncNavStoForm::AssembleElementGrad(
          }
       }
 
-      // u,p and p,u blocks
+      // Momentum - Pressure block (w,p)
       for (int i_p = 0; i_p < dof_p; ++i_p)
       {
          for (int j_u = 0; j_u < dof_u; ++j_u)
          {
             for (int dim_u = 0; dim_u < dim; ++dim_u)
             {
-               (*elmats(0,1))(j_u + dof_u * dim_u, i_p) += (shg_p(i_p, dim_u)*tau[0]*ushg_u(j_u)
+               (*elmats(0,1))(j_u + dof_u * dim_u, i_p) += (shg_p(i_p,
+                                                                  dim_u)*tau[0]*ushg_u(j_u)
                                                             -shg_u(j_u,dim_u)*sh_p(i_p))*w*dt;
-               (*elmats(1,0))(i_p, j_u + dof_u * dim_u) +=  shg_u(j_u,dim_u)*sh_p(i_p)*w*dt;
             }
          }
       }
 
-      // p,p block
+      // Continuity - Velocity block (q,u)
+      for (int i_p = 0; i_p < dof_p; ++i_p)
+      {
+         for (int j_u = 0; j_u < dof_u; ++j_u)
+         {
+            for (int dim_u = 0; dim_u < dim; ++dim_u)
+            {
+               (*elmats(1,0))(i_p, j_u + dof_u * dim_u) += sh_p(i_p)*shg_u(j_u,dim_u)*w*dt;
+               (*elmats(1,0))(i_p, j_u + dof_u * dim_u) -= shg_p(i_p, dim_u)*dupdu(j_u)*w;
+            }
+         }
+      }
+
+      // Continuity - Pressure block (w,p)
       AddMult_a_AAt(w*tau[0]*dt, shg_p, *elmats(1,1));
    }
+
 }
