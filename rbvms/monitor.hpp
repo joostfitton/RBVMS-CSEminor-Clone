@@ -17,59 +17,48 @@ using namespace mfem;
 namespace RBVMS
 {
 
-/**
-
-
-*/
-
+/// This class help monitor the convergence of the linear Krylov solve.
 class GeneralResidualMonitor : public IterativeSolverMonitor
 {
-public:
-   GeneralResidualMonitor(const std::string& prefix_, int print_lvl);
-
-   GeneralResidualMonitor(MPI_Comm comm,
-                          const std::string& prefix_, int print_lvl);
-
-   virtual void MonitorResidual(int it, real_t norm, const Vector &r, bool final);
-
 private:
    const std::string prefix;
    int rank, print_level;
    mutable real_t norm0;
+
+public:
+   /// Constructor
+   GeneralResidualMonitor(MPI_Comm comm,
+                          const std::string& prefix_,
+                          int print_lvl);
+
+   /// Print residual
+   virtual void MonitorResidual(int it,
+                                real_t norm,
+                                const Vector &r,
+                                bool final);
 };
 
+/// This class help monitor the convergence of the nonlinear Newton solve.
 class SystemResidualMonitor : public IterativeSolverMonitor
 {
-public:
-   SystemResidualMonitor(const std::string& prefix_,
-                         int print_lvl,
-                         Array<int> &offsets,
-                         DataCollection *dc_ = nullptr);
+private:
+   const std::string prefix;
+   int print_level, nvar, rank;
+   mutable Vector norm0;
+   Array<int> &bOffsets;
 
+public:
+   /// Constructor
    SystemResidualMonitor(MPI_Comm comm,
                          const std::string& prefix_,
                          int print_lvl,
                          Array<int> &offsets);
 
-   SystemResidualMonitor(MPI_Comm comm,
-                         const std::string& prefix_,
-                         int print_lvl,
-                         Array<int> &offsets,
-                         DataCollection *dc_,
-                         BlockVector *x,
-                         Array<ParGridFunction *> pgf_);
-
-   virtual void MonitorResidual(int it, real_t norm, const Vector &r, bool final);
-
-private:
-   const std::string prefix;
-   int print_level, nvar, rank;
-   mutable Vector norm0;
-   // Offsets for extracting block vector segments
-   Array<int> &bOffsets;
-   DataCollection *dc;
-   BlockVector *xp;
-   Array<ParGridFunction *> pgf;
+   /// Print residual
+   virtual void MonitorResidual(int it,
+                                real_t norm,
+                                const Vector &r,
+                                bool final);
 };
 
 } // namespace RBVMS

@@ -5,22 +5,15 @@
 // terms of the BSD-3 license.
 //------------------------------------------------------------------------------
 
-
 #include "monitor.hpp"
 
 using namespace mfem;
 using namespace RBVMS;
 
-GeneralResidualMonitor::GeneralResidualMonitor(const std::string& prefix_,
-                                               int print_lvl)
-   : prefix(prefix_)
-{
-   print_level = print_lvl;
-   rank = 1;
-}
-
+// Constructor
 GeneralResidualMonitor::GeneralResidualMonitor(MPI_Comm comm,
-                                               const std::string& prefix_, int print_lvl)
+                                               const std::string& prefix_,
+                                               int print_lvl)
    : prefix(prefix_)
 {
 #ifndef MFEM_USE_MPI
@@ -38,8 +31,11 @@ GeneralResidualMonitor::GeneralResidualMonitor(MPI_Comm comm,
 #endif
 }
 
-void GeneralResidualMonitor::MonitorResidual(int it, real_t norm,
-                                             const Vector &r, bool final)
+// Print residual
+void GeneralResidualMonitor::MonitorResidual(int it,
+                                             real_t norm,
+                                             const Vector &r,
+                                             bool final)
 {
    if (it == 0)
    {
@@ -59,18 +55,7 @@ void GeneralResidualMonitor::MonitorResidual(int it, real_t norm,
 }
 
 
-SystemResidualMonitor::SystemResidualMonitor(const std::string& prefix_,
-                                             int print_lvl,
-                                             Array<int> &offsets,
-                                             DataCollection *dc_)
-   : prefix(prefix_), bOffsets(offsets), dc(dc_)
-{
-   print_level = print_lvl;
-   nvar = bOffsets.Size()-1;
-   norm0.SetSize(nvar);
-   rank = 1;
-}
-
+// Constructor
 SystemResidualMonitor::SystemResidualMonitor(MPI_Comm comm,
                                              const std::string& prefix_,
                                              int print_lvl,
@@ -95,50 +80,12 @@ SystemResidualMonitor::SystemResidualMonitor(MPI_Comm comm,
    norm0.SetSize(nvar);
 }
 
-SystemResidualMonitor::SystemResidualMonitor(MPI_Comm comm,
-                                             const std::string& prefix_,
-                                             int print_lvl,
-                                             Array<int> &offsets,
-                                             DataCollection *dc_,
-                                             BlockVector *x,
-                                             Array<ParGridFunction *> pgf_)
-   : prefix(prefix_), bOffsets(offsets), dc(dc_), xp(x), pgf(pgf_)
+// Print residual
+void SystemResidualMonitor::MonitorResidual(int it,
+                                            real_t norm,
+                                            const Vector &r,
+                                            bool final)
 {
-#ifndef MFEM_USE_MPI
-   print_level = print_lvl;
-   rank = 1;
-#else
-   MPI_Comm_rank(comm, &rank);
-   if (rank == 0)
-   {
-      print_level = print_lvl;
-   }
-   else
-   {
-      print_level = -1;
-   }
-#endif
-   nvar = bOffsets.Size()-1;
-   norm0.SetSize(nvar);
-}
-
-
-void SystemResidualMonitor::MonitorResidual(int it, real_t norm,
-                                            const Vector &r, bool final)
-{
-   if (dc && (it > 0))
-   {
-      if (rank > 1)
-      {
-         for (int i = 0; i < nvar; ++i)
-         {
-            pgf[i]->Distribute(xp->GetBlock(i));
-         }
-      }
-      dc->SetCycle(it);
-      dc->Save();
-   }
-
    Vector vnorm(nvar);
 
    for (int i = 0; i < nvar; ++i)
@@ -169,4 +116,3 @@ void SystemResidualMonitor::MonitorResidual(int it, real_t norm,
       }
    }
 }
-
