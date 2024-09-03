@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
    newton_solver.SetMonitor(newton_monitor);
    newton_solver.SetRelTol(1e-4);
    newton_solver.SetAbsTol(1e-8);
-   newton_solver.SetMaxIter(25);
+   newton_solver.SetMaxIter(5);
    newton_solver.SetSolver(j_gmres);
 
    // 7. Define the weka form
@@ -257,12 +257,15 @@ int main(int argc, char *argv[])
    bool done = false;
    for (int ti = 0; !done; )
    {
-      cout<<"----------------------------------------\n";
-      cout << "time step: " << ti << ", time: " << t << endl;
-      cout<<"----------------------------------------\n";
-
       real_t dt_real = min(dt, t_final - t);
       tau.SetTimeStep(dt_real);
+
+      cout<<"----------------------------------------\n";
+      cout<<"time step: " << ti << ", time: " << t << endl;
+      cout<<"----------------------------------------\n";
+      cout<<"cfl = "<<form.GetCFL()<<endl;
+      cout<<"----------------------------------------\n";
+
       ode_solver->Step(xp, t, dt_real);
       ti++;
       done = (t >= t_final - 1e-8*dt);

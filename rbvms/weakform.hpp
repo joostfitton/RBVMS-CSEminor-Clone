@@ -53,8 +53,12 @@ public:
                        VectorCoefficient &force_,
                        Tau &tau);
 
-   /// set the timestep size @a dt
+   /// set the timestep size @a dt_
    void SetTimeStep(real_t &dt_) {dt = dt_; };
+
+   /// Find the local CFL-number
+   real_t GetElementCFL(const Array<const FiniteElement *>&el,
+                        ElementTransformation &Tr) const;
 
    /// Assemble the local energy
    real_t GetElementEnergy(const Array<const FiniteElement *>&el,

@@ -73,16 +73,16 @@ public:
    void SetSolution(const real_t dt,
                     const Vector &x0);
 
-   //------------------------------------------------
-   // NonlinearForm memberfunctions
-   //------------------------------------------------
+   /// Get the CFL-Number
+   real_t GetCFL() const;
+
    /// Specialized version of GetEnergy() for BlockVectors
    //real_t GetEnergyBlocked(const BlockVector &bx) const;
 
    /// Block T-Vector to Block T-Vector
    void Mult(const Vector &x, Vector &y) const;
 
-   /// Specialized version of Mult() for BlockVector%s
+   /// Specialized version of Mult() for BlockVectors
    /// Block L-Vector to Block L-Vector
    void MultBlocked(const BlockVector &bx,
                     const BlockVector &dbx,

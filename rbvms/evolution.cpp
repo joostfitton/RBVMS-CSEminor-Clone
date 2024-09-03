@@ -49,6 +49,30 @@ void ParTimeDepBlockNonlinForm::SetSolution(const real_t dt_,
    integrator.SetTimeStep(dt);
 }
 
+real_t ParTimeDepBlockNonlinForm::GetCFL() const
+{
+   real_t cfl = 0.0;
+
+   Array<const FiniteElement *> fe(fes.Size());
+   ElementTransformation *T;
+
+   for (int i = 0; i < fes[0]->GetNE(); ++i)
+   {
+      T = fes[0]->GetElementTransformation(i);
+      for (int s = 0; s < fes.Size(); ++s)
+      {
+         fe[s] = fes[s]->GetFE(i);
+      }
+
+      cfl = fmax(cfl, integrator.GetElementCFL(fe, *T));
+
+   }
+   real_t tmp = cfl;
+   MPI_Allreduce(&tmp, &cfl, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+   return cfl;
+}
+
 // Block T-Vector to Block T-Vector
 void ParTimeDepBlockNonlinForm::Mult(const Vector &dx, Vector &y) const
 {

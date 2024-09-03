@@ -53,7 +53,7 @@ public:
 */
    Tau(VectorCoefficient &adv, Coefficient &mu,
        real_t Cd = 36.0, real_t Ct = 4.0)
-      : VectorCoefficient(2), c_adv(adv), c_mu(mu),
+      : VectorCoefficient(3), c_adv(adv), c_mu(mu),
         Cd(Cd), Ct(Ct)
    {
       dim = c_adv.GetVDim();
@@ -62,7 +62,7 @@ public:
    };
 
    /// Set the timestep @a dt
-   void SetTimeStep(const double &dt_) { dt = dt_; };
+   void SetTimeStep(const double dt_) { dt = dt_;};
 
    /** Evaluate the stabilisation parameter at @a ip.
      - tau[0] approximates the momentum operator and

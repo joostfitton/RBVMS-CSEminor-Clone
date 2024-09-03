@@ -48,6 +48,32 @@ IncNavStoIntegrator::IncNavStoIntegrator(Coefficient &mu,
    }
 }
 
+// Get CFL
+real_t IncNavStoIntegrator::GetElementCFL(const Array<const FiniteElement *>&el,
+                                          ElementTransformation &Tr) const
+{
+   if (el.Size() != 2)
+   {
+      mfem_error("IncNavStoIntegrator::GetElementCFL"
+                 " has incorrect block finite element space size!");
+   }
+   Vector tau(3);
+
+   int intorder = 2*el[0]->GetOrder();
+   const IntegrationRule &ir = IntRules.Get(el[0]->GetGeomType(), intorder);
+
+   real_t cfl = 0.0;
+   for (int i = 0; i < ir.GetNPoints(); ++i)
+   {
+      const IntegrationPoint &ip = ir.IntPoint(i);
+      Tr.SetIntPoint(&ip);
+      tau_m.Eval(tau, Tr, ip);
+      cfl = fmax(cfl, tau[2]);
+   }
+
+   return cfl;
+}
+
 // Get energy
 real_t IncNavStoIntegrator::GetElementEnergy(
    const Array<const FiniteElement *>&el,
@@ -61,6 +87,7 @@ real_t IncNavStoIntegrator::GetElementEnergy(
                  " has incorrect block finite element space size!");
    }
    int dof_u = el[0]->GetDof();
+   Vector tau(3);
 
    sh_u.SetSize(dof_u);
    elf_u.UseExternalData(elsol[0]->GetData(), dof_u, dim);
@@ -81,6 +108,9 @@ real_t IncNavStoIntegrator::GetElementEnergy(
       elf_u.MultTranspose(sh_u, u);
 
       energy += w*(u*u)/2;
+
+      // Compute stability params
+      tau_m.Eval(tau, Tr, ip);
    }
 
    return energy;
@@ -127,7 +157,7 @@ void IncNavStoIntegrator::AssembleElementVector(
    sh_p.SetSize(dof_p);
    shg_p.SetSize(dof_p, dim);
 
-   Vector tau(2);
+   Vector tau(3);
 
    int intorder = 2*el[0]->GetOrder();
    const IntegrationRule &ir = IntRules.Get(el[0]->GetGeomType(), intorder);
@@ -238,7 +268,7 @@ void IncNavStoIntegrator::AssembleElementGrad(
    sh_p.SetSize(dof_p);
    shg_p.SetSize(dof_p, dim);
 
-   Vector tau(2);
+   Vector tau(3);
 
    int intorder = 2*el[0]->GetOrder();
    const IntegrationRule &ir = IntRules.Get(el[0]->GetGeomType(), intorder);

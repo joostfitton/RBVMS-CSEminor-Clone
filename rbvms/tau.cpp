@@ -14,7 +14,8 @@ using namespace RBVMS;
     - tau[0] approximates the momentum operator and
       is used for velocity reconstruction.
     - tau[1] approximates the pressure poisson operator and
-      is used for pressure reconstruction.*/
+      is used for pressure reconstruction.
+    - tau[2] reports the CFL number.*/
 void Tau::Eval(Vector &tau,
                ElementTransformation &T,
                const IntegrationPoint &ip)
@@ -24,19 +25,25 @@ void Tau::Eval(Vector &tau,
 
    MultAAt(T.InverseJacobian(),Gij);
 
-   tau[0] = Ct/(dt*dt);
+   real_t tau_t = Ct/(dt*dt);
+   real_t tau_c = 0.0;
    for (int j = 0; j < dim; j++)
+   {
       for (int i = 0; i < dim; i++)
       {
-         tau[0]  += Gij(i,j)*u[i]*u[j];
+         tau_c += Gij(i,j)*u[i]*u[j];
       }
-
+   }
+   real_t tau_d = 0.0;
    for (int j = 0; j < dim; j++)
+   {
       for (int i = 0; i < dim; i++)
       {
          tau[0]  += Cd*Gij(i,j)*Gij(i,j)*mu*mu;
       }
+   }
 
-   tau[0]  = 1.0/sqrt(tau[0]);
-   tau[1]  = 1.0/(tau[0]*Gij.Trace());
+   tau[0] = 1.0/sqrt(tau_t + tau_c + tau_d);
+   tau[1] = 1.0/(tau[0]*Gij.Trace());
+   tau[2] = sqrt(tau_c/tau_t);
 }
