@@ -10,6 +10,7 @@
 using namespace mfem;
 using namespace RBVMS;
 
+// Set the diagonal and off-diagonal operators
 void JacobianPreconditioner::SetOperator(const Operator &op)
 {
    BlockOperator *jacobian = (BlockOperator *) &op;
@@ -18,11 +19,15 @@ void JacobianPreconditioner::SetOperator(const Operator &op)
    {
       prec[i]->SetOperator(jacobian->GetBlock(i,i));
       SetDiagonalBlock(i, prec[i]);
-   }
 
-   SetBlock(1,0, const_cast<Operator*>(&jacobian->GetBlock(1,0)));
+      for (int j = i+1; j < prec.Size(); ++j)
+      {
+         SetBlock(j,i, const_cast<Operator*>(&jacobian->GetBlock(j,i)));
+      }
+   }
 }
 
+// Destructor
 JacobianPreconditioner::~JacobianPreconditioner()
 {
    for (int i = 0; i < prec.Size(); ++i)

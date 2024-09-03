@@ -18,17 +18,21 @@ namespace RBVMS
 
 // Custom block preconditioner for the Jacobian
 class JacobianPreconditioner : public
-   BlockLowerTriangularPreconditioner //BlockDiagonalPreconditioner
+   BlockLowerTriangularPreconditioner
 {
 protected:
    Array<Solver *> prec;
+
 public:
+   /// Constructor
    JacobianPreconditioner(Array<int> &offsets, Array<Solver *> p)
       : BlockLowerTriangularPreconditioner (offsets), prec(p)
    { MFEM_VERIFY(offsets.Size()-1 == p.Size(), ""); };
 
+   /// Set the diagonal and off-diagonal operators
    virtual void SetOperator(const Operator &op);
 
+   // Destructor
    virtual ~JacobianPreconditioner();
 };
 
