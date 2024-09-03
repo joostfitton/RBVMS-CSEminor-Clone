@@ -22,11 +22,12 @@
 using namespace std;
 using namespace mfem;
 
+// Function for printing compile time and runtime information.
 void printInfo()
 {
    if (Mpi::Root())
    {
-      // Build info
+      // Print header
       cout<<"----------------------------------------\n";
       cout<<R"(    _____  ______      ____  __  _____  )"<<endl;
       cout<<R"(   |  __ \|  _ \ \    / /  \/  |/ ____| )"<<endl;
@@ -42,7 +43,6 @@ void printInfo()
       cout<<"----------------------------------------\n";
       cout<< buildInfo.str() << endl;
 
-
       // Run info
       cout<<"----------------------------------------\n";
       cout<<"Run time info"<<endl;
@@ -57,16 +57,20 @@ void printInfo()
       cout<<"Numer of MPI ranks "<<Mpi::WorldSize()<<endl;
 
       cout<<"List  of hosts\n0: "<<host<<endl;
+
+      // Receive hostnames from non-root nodes
       for (int i = 1; i < Mpi::WorldSize(); i++)
       {
          MPI_Status status;
          MPI_Recv (&host, sizeof(host), MPI_CHAR, i, 1, MPI_COMM_WORLD, &status);
          cout<<i<<": "<<host<<endl;
       }
+
       cout<<"\n----------------------------------------\n\n";
    }
    else
    {
+      // Send hostnames from non-root nodes to root
       char host[80];
       gethostname(host,sizeof(host));
       MPI_Send (&host, sizeof(host), MPI_CHAR, 0, 1, MPI_COMM_WORLD);
