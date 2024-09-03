@@ -17,6 +17,10 @@ namespace RBVMS
 
 /** This Class defines the stabilisation parameter for reconstructing the
     small-scale velocity.
+     - tau[0] approximates the momentum operator and
+       is used for velocity reconstruction.
+     - tau[1] approximates the pressure poisson operator and
+       is used for pressure reconstruction.
 */
 class Tau: public VectorCoefficient
 {
@@ -28,7 +32,7 @@ protected:
    Coefficient &c_mu;
    real_t dt = -1.0;
 
-   /// Coefficients
+   /// Constants used in the stabilisation parameter
    real_t Cd, Ct;
 
    /// Dimension of the problem
@@ -42,8 +46,11 @@ protected:
 
 public:
    /** Construct a stabilized confection-diffusion integrator with:
-       - @a adv the convection velocity
-       - @a mu the diffusion coefficient*/
+       - @a adv the convection velocity.
+       - @a mu the diffusion coefficient.
+       - @a Cd the constant used to scale the diffusive part
+       - @a Ct the constant used to scale the temporal part
+*/
    Tau(VectorCoefficient &adv, Coefficient &mu,
        real_t Cd = 36.0, real_t Ct = 4.0)
       : VectorCoefficient(2), c_adv(adv), c_mu(mu),
@@ -54,10 +61,15 @@ public:
       Gij.SetSize(dim);
    };
 
+   /// Set the timestep @a dt
    void SetTimeStep(const double &dt_) { dt = dt_; };
 
-   /// Evaluate the coefficient at @a ip.
-   virtual void Eval(Vector &V,
+   /** Evaluate the stabilisation parameter at @a ip.
+     - tau[0] approximates the momentum operator and
+       is used for velocity reconstruction.
+     - tau[1] approximates the pressure poisson operator and
+       is used for pressure reconstruction.*/
+   virtual void Eval(Vector &tau,
                      ElementTransformation &T,
                      const IntegrationPoint &ip) override;
 

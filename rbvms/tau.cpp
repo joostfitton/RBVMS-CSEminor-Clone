@@ -10,6 +10,11 @@
 using namespace mfem;
 using namespace RBVMS;
 
+/* Evaluate the stabilisation parameter at @a ip.
+    - tau[0] approximates the momentum operator and
+      is used for velocity reconstruction.
+    - tau[1] approximates the pressure poisson operator and
+      is used for pressure reconstruction.*/
 void Tau::Eval(Vector &tau,
                ElementTransformation &T,
                const IntegrationPoint &ip)
