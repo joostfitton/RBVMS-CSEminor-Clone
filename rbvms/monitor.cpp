@@ -60,7 +60,7 @@ SystemResidualMonitor::SystemResidualMonitor(MPI_Comm comm,
                                              const std::string& prefix_,
                                              int print_lvl,
                                              Array<int> &offsets)
-   : prefix(prefix_), bOffsets(offsets), dc(nullptr), xp(nullptr)
+   : prefix(prefix_), bOffsets(offsets)
 {
 #ifndef MFEM_USE_MPI
    print_level = print_lvl;
