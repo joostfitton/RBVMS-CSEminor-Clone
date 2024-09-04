@@ -16,7 +16,7 @@ using namespace mfem;
 namespace RBVMS
 {
 
-/** This class defines a time-dependent integrator for the 
+/** This class defines a time-dependent integrator for the
     Residual-based Variational multiscale formulation
     for incompressible Navier-Stokes flow.
 */
@@ -54,7 +54,12 @@ public:
                        Tau &tau);
 
    /// set the timestep size @a dt_
-   void SetTimeStep(real_t &dt_) {dt = dt_; };
+   void SetTimeAndStep(const real_t &t, const real_t &dt_)
+   {
+      dt = dt_;
+      c_mu.SetTime(t);
+      c_force.SetTime(t);
+   };
 
    /// Find the local CFL-number
    real_t GetElementCFL(const Array<const FiniteElement *>&el,

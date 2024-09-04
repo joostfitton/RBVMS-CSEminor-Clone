@@ -22,7 +22,7 @@ class GeneralResidualMonitor : public IterativeSolverMonitor
 {
 private:
    const std::string prefix;
-   int rank, print_level;
+   int print_level;
    mutable real_t norm0;
 
 public:
@@ -43,7 +43,7 @@ class SystemResidualMonitor : public IterativeSolverMonitor
 {
 private:
    const std::string prefix;
-   int print_level, nvar, rank;
+   int print_level, nvar;
    mutable Vector norm0;
    Array<int> &bOffsets;
 

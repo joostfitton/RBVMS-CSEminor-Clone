@@ -368,8 +368,8 @@ void IncNavStoIntegrator::AssembleElementGrad(
             {
                for (int j_dim = 0; j_dim < dim; ++j_dim)
                {
-                  (*elmats(0,0))(i_u + i_dim*dof_u, j_u + j_dim*dof_u) 
-                     += (mu + tau[1])*shg_u(i_u,j_dim)*shg_u(j_u,i_dim)*w*dt;
+                  (*elmats(0,0))(i_u + i_dim*dof_u, j_u + j_dim*dof_u)
+                  += (mu + tau[1])*shg_u(i_u,j_dim)*shg_u(j_u,i_dim)*w*dt;
                }
             }
          }
@@ -383,8 +383,8 @@ void IncNavStoIntegrator::AssembleElementGrad(
             for (int dim_u = 0; dim_u < dim; ++dim_u)
             {
                (*elmats(0,1))(j_u + dof_u * dim_u, i_p)
-                  += (shg_p(i_p,dim_u)*tau[0]*ushg_u(j_u)
-                      - shg_u(j_u,dim_u)*sh_p(i_p))*w*dt;
+               += (shg_p(i_p,dim_u)*tau[0]*ushg_u(j_u)
+                   - shg_u(j_u,dim_u)*sh_p(i_p))*w*dt;
             }
          }
       }
@@ -397,9 +397,9 @@ void IncNavStoIntegrator::AssembleElementGrad(
             for (int dim_u = 0; dim_u < dim; ++dim_u)
             {
                (*elmats(1,0))(i_p, j_u + dof_u * dim_u)
-                  += sh_p(i_p)*shg_u(j_u,dim_u)*w*dt;
+               += sh_p(i_p)*shg_u(j_u,dim_u)*w*dt;
                (*elmats(1,0))(i_p, j_u + dof_u * dim_u)
-                  -= shg_p(i_p, dim_u)*dupdu(j_u)*w;
+               -= shg_p(i_p, dim_u)*dupdu(j_u)*w;
             }
          }
       }

@@ -34,10 +34,7 @@ int main(int argc, char *argv[])
    Hypre::Init();
 
    // 2. Print relevant info
-   if (Mpi::Root())
-   {
-      printInfo();
-   }
+   printInfo();
 
    // 3. Parse command-line options.
    const char *mesh_file = "../../mfem/data/inline-quad.mesh";
@@ -82,10 +79,10 @@ int main(int argc, char *argv[])
    args.Parse();
    if (!args.Good())
    {
-      if (myid == 0) { args.PrintUsage(cout); }
+      if (Mpi::Root()) { args.PrintUsage(cout); }
       return 1;
    }
-   if (myid == 0) { args.PrintOptions(cout); }
+   if (Mpi::Root()) { args.PrintOptions(cout); }
 
    // 4. Read the mesh from the given mesh file.
    Mesh mesh(mesh_file, 1, 1);
@@ -102,7 +99,7 @@ int main(int argc, char *argv[])
       {
          mesh.UniformRefinement();
       }
-      if (myid == 0) { mesh.PrintInfo(); }
+      if (Mpi::Root()) { mesh.PrintInfo(); }
    }
 
    // Partition
@@ -132,7 +129,7 @@ int main(int argc, char *argv[])
       MPI_Reduce(tdof.GetData(), pdof.GetData(), num_procs,
                  MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
 
-      if (myid == 0)
+      if (Mpi::Root())
       {
          mfem::out << "Number of finite element unknowns:\n";
          mfem::out << "\tVelocity = "<<spaces[0]->GlobalTrueVSize() << endl;
@@ -148,8 +145,8 @@ int main(int argc, char *argv[])
    Array<int> ess_bdr_u(spaces[0]->GetMesh()->bdr_attributes.Max());
    Array<int> ess_bdr_p(spaces[1]->GetMesh()->bdr_attributes.Max());
 
-   ess_bdr_p = 0;
    ess_bdr_u = 1;
+   ess_bdr_p = 0;
 
    ess_bdr[0] = &ess_bdr_u;
    ess_bdr[1] = &ess_bdr_p;
@@ -249,7 +246,6 @@ int main(int argc, char *argv[])
          cout << "Unknown ODE solver type: " << ode_solver_type << '\n';
          mfem_error("Can not continue");
    }
-   cout << "ODE solver type: " << ode_solver_type << '\n';
    ode_solver->Init(evo);
 
    // 9. Actual time integration
@@ -259,23 +255,27 @@ int main(int argc, char *argv[])
    {
       real_t dt_real = min(dt, t_final - t);
       tau.SetTimeStep(dt_real);
-
-      cout<<"----------------------------------------\n";
-      cout<<"time step: " << ti << ", time: " << t << endl;
-      cout<<"----------------------------------------\n";
-      cout<<"cfl = "<<form.GetCFL()<<endl;
-      cout<<"----------------------------------------\n";
-
+      double cfl = form.GetCFL();
+      if (Mpi::Root())
+      {
+         cout<<"----------------------------------------\n";
+         cout<<"time step: " << ti << ", time: " << t << endl;
+         cout<<"----------------------------------------\n";
+         cout<<"cfl = "<<cfl<<endl;
+         cout<<"----------------------------------------\n";
+      }
       ode_solver->Step(xp, t, dt_real);
       ti++;
       done = (t >= t_final - 1e-8*dt);
 
       if (done || ti % vis_steps == 0)
       {
-         cout<<"\n\n";
-         cout << "Visit output: Cycle " << ti << "\t Time: " << t << endl;
-         cout<<"\n\n";
-
+         if (Mpi::Root())
+         {
+            cout<<"\n\n";
+            cout << "Visit output: Cycle " << ti << "\t Time: " << t << endl;
+            cout<<"\n\n";
+         }
          x_u.Distribute(xp.GetBlock(0));
          x_p.Distribute(xp.GetBlock(1));
 

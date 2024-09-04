@@ -24,7 +24,7 @@ Evolution::Evolution(ParTimeDepBlockNonlinForm &form,
 void Evolution::ImplicitSolve(const real_t dt,
                               const Vector &u0, Vector &dudt_)
 {
-   form.SetSolution(dt, u0);
+   form.SetTimeAndSolution(t, dt, u0);
    Vector zero;
    solver.Mult(zero, dudt);
    dudt_ = dudt;
@@ -40,13 +40,14 @@ ParTimeDepBlockNonlinForm::
 
 // Set the solution of the previous time step
 // and the timestep size of the current solve.
-void ParTimeDepBlockNonlinForm::SetSolution(const real_t dt_,
-                                            const Vector &x0_)
+void ParTimeDepBlockNonlinForm::SetTimeAndSolution(const real_t t,
+                                                   const real_t dt_,
+                                                   const Vector &x0_)
 {
    dt = dt_;
    x0 = x0_;
    x.SetSize(x0.Size());
-   integrator.SetTimeStep(dt);
+   integrator.SetTimeAndStep(t,dt);
 }
 
 real_t ParTimeDepBlockNonlinForm::GetCFL() const
@@ -68,6 +69,7 @@ real_t ParTimeDepBlockNonlinForm::GetCFL() const
 
    }
    real_t tmp = cfl;
+
    MPI_Allreduce(&tmp, &cfl, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
    return cfl;

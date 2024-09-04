@@ -50,7 +50,7 @@ public:
        - @a mu the diffusion coefficient.
        - @a Cd the constant used to scale the diffusive part
        - @a Ct the constant used to scale the temporal part
-*/
+   */
    Tau(VectorCoefficient &adv, Coefficient &mu,
        real_t Cd = 36.0, real_t Ct = 4.0)
       : VectorCoefficient(3), c_adv(adv), c_mu(mu),

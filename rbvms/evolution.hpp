@@ -70,8 +70,9 @@ public:
 
    /// Set the solution of the previous time step @a x0
    /// and the timestep size @a dt of the current solve.
-   void SetSolution(const real_t dt,
-                    const Vector &x0);
+   void SetTimeAndSolution(const real_t t,
+                           const real_t dt,
+                           const Vector &x0);
 
    /// Get the CFL-Number
    real_t GetCFL() const;

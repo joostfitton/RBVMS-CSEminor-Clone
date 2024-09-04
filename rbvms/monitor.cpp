@@ -16,11 +16,7 @@ GeneralResidualMonitor::GeneralResidualMonitor(MPI_Comm comm,
                                                int print_lvl)
    : prefix(prefix_)
 {
-#ifndef MFEM_USE_MPI
-   print_level = print_lvl;
-#else
-   MPI_Comm_rank(comm, &rank);
-   if (rank == 0)
+   if (Mpi::Root())
    {
       print_level = print_lvl;
    }
@@ -28,7 +24,6 @@ GeneralResidualMonitor::GeneralResidualMonitor(MPI_Comm comm,
    {
       print_level = -1;
    }
-#endif
 }
 
 // Print residual
@@ -42,7 +37,7 @@ void GeneralResidualMonitor::MonitorResidual(int it,
       norm0 = norm;
    }
 
-   if ((print_level > 0 &&  it%print_level == 0) || final)
+   if ((print_level > 0) && (( it%print_level == 0) || final))
    {
       mfem::out<<prefix<<" iteration "<<std::setw(2)<<it
                <<" : ||r|| = "
@@ -62,12 +57,7 @@ SystemResidualMonitor::SystemResidualMonitor(MPI_Comm comm,
                                              Array<int> &offsets)
    : prefix(prefix_), bOffsets(offsets)
 {
-#ifndef MFEM_USE_MPI
-   print_level = print_lvl;
-   rank = 1;
-#else
-   MPI_Comm_rank(comm, &rank);
-   if (rank == 0)
+   if (Mpi::Root())
    {
       print_level = print_lvl;
    }
@@ -75,7 +65,6 @@ SystemResidualMonitor::SystemResidualMonitor(MPI_Comm comm,
    {
       print_level = -1;
    }
-#endif
    nvar = bOffsets.Size()-1;
    norm0.SetSize(nvar);
 }
@@ -91,18 +80,11 @@ void SystemResidualMonitor::MonitorResidual(int it,
    for (int i = 0; i < nvar; ++i)
    {
       Vector r_i(r.GetData() + bOffsets[i], bOffsets[i+1] - bOffsets[i]);
-      if ( rank == 1 )
-      {
-         vnorm[i] = r_i.Norml2();
-      }
-      else
-      {
-         vnorm[i] = sqrt(InnerProduct(MPI_COMM_WORLD, r_i, r_i));
-      }
+      vnorm[i] = sqrt(InnerProduct(MPI_COMM_WORLD, r_i, r_i));
       if (it == 0) { norm0[i] = vnorm[i]; }
    }
 
-   bool print = (print_level > 0 &&  it%print_level == 0) || final;
+   bool print = (print_level > 0) &&  ((it%print_level == 0) || final);
    if (print)
    {
       mfem::out << prefix << " iteration " << std::setw(3) << it <<"\n"
@@ -115,4 +97,5 @@ void SystemResidualMonitor::MonitorResidual(int it,
                   <<100*vnorm[i]/norm0[i]<<" % \n";
       }
    }
+   mfem::out<<std::flush;
 }
