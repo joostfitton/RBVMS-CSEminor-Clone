@@ -25,6 +25,7 @@ IncNavStoIntegrator::IncNavStoIntegrator(Coefficient &mu,
    grad_u.SetSize(dim);
    hess_u.SetSize(dim, (dim*(dim+1))/2);
    grad_p.SetSize(dim);
+   nor.SetSize(dim);
    hmap.SetSize(dim,dim);
 
    if (dim == 2)
@@ -116,7 +117,7 @@ real_t IncNavStoIntegrator::GetElementEnergy(
    return energy;
 }
 
-// Get residual vector
+// Assemble the element interior residual vectors
 void IncNavStoIntegrator::AssembleElementVector(
    const Array<const FiniteElement *> &el,
    ElementTransformation &Tr,
@@ -235,7 +236,7 @@ void IncNavStoIntegrator::AssembleElementVector(
    }
 }
 
-// Get gradient matrix
+// Assemble the element interior gradient matrices
 void IncNavStoIntegrator::AssembleElementGrad(
    const Array<const FiniteElement*> &el,
    ElementTransformation &Tr,
@@ -356,7 +357,7 @@ void IncNavStoIntegrator::AssembleElementGrad(
 
             // Convection -- frozen convection
             mat -= ushg_u(i_u)*sh_u(j_u)*dt;           // Galerkin
-            mat -= ushg_u(i_u)*dupdu(j_u);             // SUPG - Conv
+            mat -= ushg_u(i_u)*dupdu(j_u);             // SUPG
 
             mat *= w;
             for (int dim_u = 0; dim_u < dim; ++dim_u)
@@ -369,7 +370,7 @@ void IncNavStoIntegrator::AssembleElementGrad(
                for (int j_dim = 0; j_dim < dim; ++j_dim)
                {
                   (*elmats(0,0))(i_u + i_dim*dof_u, j_u + j_dim*dof_u)
-                  += (mu + tau[1])*shg_u(i_u,j_dim)*shg_u(j_u,i_dim)*w*dt;
+                  += (mu + tau[1])*shg_u(i_u,i_dim)*shg_u(j_u,j_dim)*w*dt;
                }
             }
          }
@@ -407,5 +408,130 @@ void IncNavStoIntegrator::AssembleElementGrad(
       // Continuity - Pressure block (w,p)
       AddMult_a_AAt(w*tau[0]*dt, shg_p, *elmats(1,1));
    }
+
+}
+
+
+// Assemble the outflow boundary residual vectors
+void IncNavStoIntegrator
+::AssembleOutflowVector(const Array<const FiniteElement *> &el1,
+                        const Array<const FiniteElement *> &el2,
+                        FaceElementTransformations &Tr,
+                        const Array<const Vector *> &elsol,
+                        const Array<Vector *> &elvec)
+{
+
+   int dof_u = el1[0]->GetDof();
+
+   elvec[0]->SetSize(dof_u*dim);
+   *elvec[0] = 0.0;
+
+   elf_u.UseExternalData(elsol[0]->GetData(), dof_u, dim);
+   elv_u.UseExternalData(elvec[0]->GetData(), dof_u, dim);
+
+   sh_u.SetSize(dof_u);
+
+   int intorder = 2*el1[0]->GetOrder();
+   const IntegrationRule &ir = IntRules.Get(Tr.GetGeometryType(), intorder);
+   for (int p = 0; p < ir.GetNPoints(); p++)
+   {
+      const IntegrationPoint &ip = ir.IntPoint(p);
+
+      // Set the integration point in the face and the neighboring element
+      Tr.SetAllIntPoints(&ip);
+
+      // Access the neighboring element's integration point
+      const IntegrationPoint &eip = Tr.GetElement1IntPoint();
+
+      CalcOrtho(Tr.Jacobian(), nor);
+
+      real_t w = ip.weight * 0.5;//* Tr.Weight();
+
+      el1[0]->CalcPhysShape(*Tr.Elem1, sh_u);
+      elf_u.MultTranspose(sh_u, u);
+
+      real_t un = u*nor;
+      AddMult_a_VWt(w*un, sh_u, u, elv_u);
+   }
+}
+
+// Assemble the outflow boundary gradient matrices
+void IncNavStoIntegrator
+::AssembleOutflowGrad(const Array<const FiniteElement *>&el1,
+                      const Array<const FiniteElement *>&el2,
+                      FaceElementTransformations &Tr,
+                      const Array<const Vector *> &elsol,
+                      const Array2D<DenseMatrix *> &elmats)
+{
+   int dof_u = el1[0]->GetDof();
+
+   elf_u.UseExternalData(elsol[0]->GetData(), dof_u, dim);
+
+   elmats(0,0)->SetSize(dof_u*dim, dof_u*dim);
+   *elmats(0,0) = 0.0;
+
+   sh_u.SetSize(dof_u);
+
+   int intorder = 2*el1[0]->GetOrder();
+   const IntegrationRule &ir = IntRules.Get(Tr.GetGeometryType(), intorder);
+real_t bl = 0.0;
+   for (int p = 0; p < ir.GetNPoints(); p++)
+   {
+      const IntegrationPoint &ip = ir.IntPoint(p);
+
+      // Set the integration point in the face and the neighboring element
+      Tr.SetAllIntPoints(&ip);
+
+      // Access the neighboring element's integration point
+      const IntegrationPoint &eip = Tr.GetElement1IntPoint();
+
+      CalcOrtho(Tr.Jacobian(), nor);
+//nor.Print();
+      real_t w = ip.weight * 0.5;//Tr.Weight();
+bl += w;
+      el1[0]->CalcPhysShape(*Tr.Elem1, sh_u);
+      elf_u.MultTranspose(sh_u, u);
+
+      real_t un = u*nor;
+
+      // Momentum - Velocity block (w,u)
+      for (int i_u = 0; i_u < dof_u; ++i_u)
+      {
+         for (int j_u = 0; j_u < dof_u; ++j_u)
+         {
+            real_t mat = sh_u(i_u)*sh_u(j_u)*un*w*dt;
+
+            for (int dim_u = 0; dim_u < dim; ++dim_u)
+            {
+               (*elmats(0,0))(i_u + dim_u*dof_u, j_u + dim_u*dof_u) += mat;
+            }
+         }
+      }
+   }
+//std::cout<<"bl ="<<bl<<std::endl;
+}
+
+
+// Assemble the weak Dirichlet BC boundary residual vectors
+void IncNavStoIntegrator
+::AssembleWeakDirBCVector(const Array<const FiniteElement *> &el1,
+                          const Array<const FiniteElement *> &el2,
+                          FaceElementTransformations &Tr,
+                          const Array<const Vector *> &elfun,
+                          const Array<Vector *> &elvect)
+{
+
+}
+
+
+// Assemble the weak Dirichlet BC boundary gradient matrices
+void IncNavStoIntegrator
+::AssembleWeakDirBCGrad(const
+                        Array<const FiniteElement *>&el1,
+                        const Array<const FiniteElement *>&el2,
+                        FaceElementTransformations &Tr,
+                        const Array<const Vector *> &elfun,
+                        const Array2D<DenseMatrix *> &elmats)
+{
 
 }

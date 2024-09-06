@@ -125,6 +125,7 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
    Array<const FiniteElement *> fe(fes.Size());
    Array<const FiniteElement *> fe2(fes.Size());
    ElementTransformation *T;
+   FaceElementTransformations *Tr;
    Array<DofTransformation *> doftrans(fes.Size()); doftrans = nullptr;
    Mesh *mesh = fes[0]->GetMesh();
 
@@ -140,6 +141,7 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
       vdofs2[s] = new Array<int>;
    }
 
+   // Domain interior
    for (int i = 0; i < fes[0]->GetNE(); ++i)
    {
       T = fes[0]->GetElementTransformation(i);
@@ -166,6 +168,35 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
          if (el_y[s]->Size() == 0) { continue; }
          if (doftrans[s]) {doftrans[s]->TransformDual(*el_y[s]); }
          by.GetBlock(s).AddElementVector(*(vdofs[s]), *el_y[s]);
+      }
+   }
+
+   // Domain boundary Outflow or Weak Dirichlet
+   for (int i = 0; i < mesh->GetNBE(); ++i)
+   {
+      const int bdr_attr = mesh->GetBdrAttribute(i);
+
+      if ( bdr_attr != 4) { continue; }
+
+      Tr = mesh->GetBdrFaceTransformations(i);
+      if (Tr != NULL)
+      {
+         for (int s=0; s<fes.Size(); ++s)
+         {
+            fe[s] = fes[s]->GetFE(Tr->Elem1No);
+            fe2[s] = fes[s]->GetFE(Tr->Elem1No);
+
+            fes[s]->GetElementVDofs(Tr->Elem1No, *(vdofs[s]));
+            bx.GetBlock(s).GetSubVector(*(vdofs[s]), *el_x[s]);
+         }
+
+         integrator.AssembleOutflowVector(fe, fe2, *Tr, el_x_const, el_y);
+         //integrator->AssembleWeakDirBcVector(fe, fe2, *tr, el_x_const, el_y);
+         for (int s=0; s<fes.Size(); ++s)
+         {
+            if (el_y[s]->Size() == 0) { continue; }
+            by.GetBlock(s).AddElementVector(*(vdofs[s]), *el_y[s]);
+         }
       }
    }
 
@@ -302,6 +333,7 @@ void ParTimeDepBlockNonlinForm
    Array<const FiniteElement *>fe(fes.Size());
    Array<const FiniteElement *>fe2(fes.Size());
    ElementTransformation * T;
+   FaceElementTransformations *Tr;
    Array<DofTransformation *> doftrans(fes.Size()); doftrans = nullptr;
    Mesh *mesh = fes[0]->GetMesh();
 
@@ -333,6 +365,7 @@ void ParTimeDepBlockNonlinForm
       }
    }
 
+   // Domain interior
    for (int i = 0; i < fes[0]->GetNE(); ++i)
    {
       T = fes[0]->GetElementTransformation(i);
@@ -362,6 +395,38 @@ void ParTimeDepBlockNonlinForm
             }
             Grads(j,l)->AddSubMatrix(*vdofs[j], *vdofs[l],
                                      *elmats(j,l), skip_zeros);
+         }
+      }
+   }
+
+   // Domain boundary Outflow or Weak Dirichlet
+   for (int i = 0; i < mesh->GetNBE(); ++i)
+   {
+      const int bdr_attr = mesh->GetBdrAttribute(i);
+
+      if ( bdr_attr != 4) { continue; }
+
+      Tr = mesh->GetBdrFaceTransformations(i);
+      if (Tr != NULL)
+      {
+         for (int s = 0; s < fes.Size(); ++s)
+         {
+            fe[s] = fes[s]->GetFE(Tr->Elem1No);
+            fe2[s] = fe[s];
+
+            fes[s]->GetElementVDofs(Tr->Elem1No, *vdofs[s]);
+            bx.GetBlock(s).GetSubVector(*vdofs[s], *el_x[s]);
+         }
+
+         integrator.AssembleOutflowGrad(fe, fe2, *Tr, el_x_const, elmats);
+         for (int l=0; l<fes.Size(); ++l)
+         {
+            for (int j=0; j<fes.Size(); ++j)
+            {
+               if (elmats(j,l)->Height() == 0) { continue; }
+               Grads(j,l)->AddSubMatrix(*vdofs[j], *vdofs[l],
+                                        *elmats(j,l), skip_zeros);
+            }
          }
       }
    }

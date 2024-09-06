@@ -16,7 +16,7 @@ using namespace mfem;
 namespace RBVMS
 {
 
-/** This class defines a time-dependent integrator for the
+/** This class defines the time-dependent integrator for the
     Residual-based Variational multiscale formulation
     for incompressible Navier-Stokes flow.
 */
@@ -37,7 +37,7 @@ private:
    Array2D<int> hmap;
 
    /// Physical values
-   mutable Vector u, dudt, f, grad_p, res_m, up;
+   mutable Vector u, dudt, f, grad_p, res_m, up, nor;
    mutable DenseMatrix flux;
 
    /// Solution & Residual vector
@@ -53,7 +53,7 @@ public:
                        VectorCoefficient &force_,
                        Tau &tau);
 
-   /// set the timestep size @a dt_
+   /// Set the timestep size @a dt_
    void SetTimeAndStep(const real_t &t, const real_t &dt_)
    {
       dt = dt_;
@@ -71,19 +71,49 @@ public:
                            const Array<const Vector *> &elfun,
                            const Array<const Vector *> &elrate) const;
 
-   /// Assemble the local residual vectors
+   /// Assemble the element interior residual vectors
    void AssembleElementVector(const Array<const FiniteElement *> &el,
                               ElementTransformation &Tr,
                               const Array<const Vector *> &elsol,
                               const Array<const Vector *> &elrate,
                               const Array<Vector *> &elvec) const;
 
-   /// Assemble the local gradient matrices
+   /// Assemble the element interior gradient matrices
    void AssembleElementGrad(const Array<const FiniteElement*> &el,
                             ElementTransformation &Tr,
                             const Array<const Vector *> &elsol,
                             const Array<const Vector *> &elrate,
                             const Array2D<DenseMatrix *> &elmats) const;
+
+
+   /// Assemble the outflow boundary residual vectors
+   void AssembleOutflowVector(const Array<const FiniteElement *> &el1,
+                              const Array<const FiniteElement *> &el2,
+                              FaceElementTransformations &Tr,
+                              const Array<const Vector *> &elfun,
+                              const Array<Vector *> &elvect);
+
+   /// Assemble the outflow boundary gradient matrices
+   void AssembleOutflowGrad(const Array<const FiniteElement *>&el1,
+                            const Array<const FiniteElement *>&el2,
+                            FaceElementTransformations &Tr,
+                            const Array<const Vector *> &elfun,
+                            const Array2D<DenseMatrix *> &elmats);
+
+
+   /// Assemble the weak Dirichlet BC boundary residual vectors
+   void AssembleWeakDirBCVector(const Array<const FiniteElement *> &el1,
+                                const Array<const FiniteElement *> &el2,
+                                FaceElementTransformations &Tr,
+                                const Array<const Vector *> &elfun,
+                                const Array<Vector *> &elvect);
+
+   /// Assemble the weak Dirichlet BC boundary gradient matrices
+   void AssembleWeakDirBCGrad(const Array<const FiniteElement *>&el1,
+                              const Array<const FiniteElement *>&el2,
+                              FaceElementTransformations &Tr,
+                              const Array<const Vector *> &elfun,
+                              const Array2D<DenseMatrix *> &elmats);
 };
 
 } // namespace RBVMS
