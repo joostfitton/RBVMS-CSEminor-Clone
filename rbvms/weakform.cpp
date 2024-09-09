@@ -474,7 +474,7 @@ void IncNavStoIntegrator
 
    int intorder = 2*el1[0]->GetOrder();
    const IntegrationRule &ir = IntRules.Get(Tr.GetGeometryType(), intorder);
-real_t bl = 0.0;
+
    for (int p = 0; p < ir.GetNPoints(); p++)
    {
       const IntegrationPoint &ip = ir.IntPoint(p);
@@ -486,9 +486,9 @@ real_t bl = 0.0;
       const IntegrationPoint &eip = Tr.GetElement1IntPoint();
 
       CalcOrtho(Tr.Jacobian(), nor);
-//nor.Print();
+
       real_t w = ip.weight * 0.5;//Tr.Weight();
-bl += w;
+
       el1[0]->CalcPhysShape(*Tr.Elem1, sh_u);
       elf_u.MultTranspose(sh_u, u);
 
@@ -508,7 +508,6 @@ bl += w;
          }
       }
    }
-//std::cout<<"bl ="<<bl<<std::endl;
 }
 
 

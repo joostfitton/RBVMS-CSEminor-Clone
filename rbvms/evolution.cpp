@@ -30,16 +30,15 @@ void Evolution::ImplicitSolve(const real_t dt,
    dudt_ = dudt;
 }
 
-//
+// Get the CFL number from the formulation
 real_t Evolution::GetCFL() const
 {
    return form.GetCFL();
 }
 
-//
+// Get the boundary forces from the formulation
 void Evolution::GetForce(DenseMatrix &force)
 {
-
    DenseMatrix &bf = form.GetForce();
    force.SetSize(bf.Height(), bf.Width());
    force = bf;
@@ -56,7 +55,6 @@ ParTimeDepBlockNonlinForm::
 // Set the boundaries were strong Dirichlet BCs are imposed
 void ParTimeDepBlockNonlinForm::SetStrongBC (Array<int> strong_bdr)
 {
-
    strong_bdr.Copy(strongBCBdr);
 
    // Translate indices
@@ -287,7 +285,7 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
 
 
    // Domain boundary weak Dirichelet BC
-/*   for (int i = 0; i < mesh->GetNBE(); ++i)
+   for (int i = 0; i < mesh->GetNBE(); ++i)
    {
       // Determine if boundary is outflow
       const int bdr_attr = mesh->GetBdrAttribute(i);
@@ -311,15 +309,14 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
             bx.GetBlock(s).GetSubVector(*(vdofs[s]), *el_x[s]);
          }
 
-       //  integrator.AssembleWeakDirBcVector(fe, fe2, *Tr, el_x_const, el_y);
+         integrator.AssembleWeakDirBCVector(fe, fe2, *Tr, el_x_const, el_y);
          for (int s=0; s<fes.Size(); ++s)
          {
             if (el_y[s]->Size() == 0) { continue; }
             by.GetBlock(s).AddElementVector(*(vdofs[s]), *el_y[s]);
          }
       }
-   }*/
-
+   }
 
    for (int s=0; s<fes.Size(); ++s)
    {
@@ -331,7 +328,6 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
 
    by.SyncFromBlocks();
 }
-
 
 // Get Gradient
 BlockOperator & ParTimeDepBlockNonlinForm::GetGradient(const Vector &x) const

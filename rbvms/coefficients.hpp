@@ -42,7 +42,10 @@ public:
           If false the default value @a val is used.
         - @a val the value to use if the function is not found.*/
    LibCoefficient(string libName, string funName,
-                  bool required = true, real_t val = 0.0);
+                  bool required = true, real_t val = 0.0): val(val)
+   {
+      GetLibFunction(libName, vector<string>({funName}), required);
+   }
 
    /** Get a @a funNames C-function from the @a libName library
         - @a libName path+name of the library to use.
@@ -53,7 +56,10 @@ public:
           If false the default value @a val is used.
         - @a val the value to use if the function is not found.*/
    LibCoefficient(string libName, vector<string> funNames,
-                  bool required = true, real_t val = 0.0);
+                  bool required = true, real_t val = 0.0): val(val)
+   {
+      GetLibFunction(libName, funNames, required);
+   }
 
    /// Evaluate
    virtual real_t Eval(ElementTransformation &T,
@@ -90,7 +96,11 @@ public:
           If false the default value @a val is used.
         - @a val the value to use if the function is not found.*/
    LibVectorCoefficient(int vdim, string libName, string funName,
-                        bool required = true);
+                        bool required = true) : VectorCoefficient(vdim)
+   {
+      GetLibFunction(libName, vector<string>({funName}), required);
+   }
+
 
    /** Get a @a funNames C-function from the @a libName library
         - @a libName path+name of the library to use.
@@ -101,7 +111,10 @@ public:
           If false the default value @a val is used.
         - @a val the value to use if the function is not found.*/
    LibVectorCoefficient(int vdim, string libName, vector<string> funNames,
-                        bool required = true);
+                        bool required = true) : VectorCoefficient(vdim)
+   {
+      GetLibFunction(libName, funNames, required);
+   }
 
    /// Evaluate
    virtual void Eval(Vector &V,

@@ -11,24 +11,6 @@
 using namespace std;
 using namespace mfem;
 
-// Constructor
-LibCoefficient::LibCoefficient(string libName,
-                               string funName,
-                               bool required,
-                               real_t val) : val(val)
-{
-   GetLibFunction(libName, vector<string>({funName}), required);
-}
-
-// Constructor
-LibCoefficient::LibCoefficient(string libName,
-                               vector<string> funNames,
-                               bool required,
-                               real_t val) : val(val)
-{
-   GetLibFunction(libName, funNames, required);
-}
-
 // Get the function from the library
 void LibCoefficient::GetLibFunction(string libName,
                                     vector<string> funNames,
@@ -97,27 +79,6 @@ LibCoefficient::~LibCoefficient()
 }
 
 
-// Constructor
-LibVectorCoefficient::LibVectorCoefficient(int vdim,
-                                           string libName,
-                                           string funName,
-                                           bool required) 
-  : VectorCoefficient(vdim)
-{
-   GetLibFunction(libName, vector<string>({funName}), required);
-}
-
-
-// Constructor
-LibVectorCoefficient::LibVectorCoefficient(int vdim,
-                                           string libName,
-                                           vector<string> funNames,
-                                           bool required)
-  : VectorCoefficient(vdim)
-{
-   GetLibFunction(libName, funNames, required);
-}
-
 // Get the function from the library
 void LibVectorCoefficient::GetLibFunction(string libName,
                                           vector<string> funNames,
@@ -184,7 +145,7 @@ void LibVectorCoefficient::Eval(Vector &V,
    (*TDFunction)(x.GetData(), x.Size(), GetTime(), V.GetData(), V.Size());
 }
 
-// Destructor
+//  Destructor
 LibVectorCoefficient::~LibVectorCoefficient()
 {
    if (libHandle) dlclose(libHandle);

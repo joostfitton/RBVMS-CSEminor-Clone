@@ -26,7 +26,6 @@ void JacobianPreconditioner::SetOperator(const Operator &op)
       prec[1] = new HypreSmoother();//*Jpp);
    }
 
-
    for (int i = 0; i < prec.Size(); ++i)
    {
       prec[i]->SetOperator(jacobian->GetBlock(i,i));

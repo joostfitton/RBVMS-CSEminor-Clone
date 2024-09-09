@@ -100,6 +100,7 @@ public:
    /// Get the CFL-Number
    real_t GetCFL() const;
 
+   /// Get the conservative boundary forces
    DenseMatrix& GetForce() { return bdrForce;};
 
    /// Specialized version of GetEnergy() for BlockVectors

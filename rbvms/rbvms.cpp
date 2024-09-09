@@ -56,9 +56,9 @@ int main(int argc, char *argv[])
    Array<int> weak_bdr;
    Array<int> outflow_bdr;
 
-
    OptionsParser args(argc, argv);
 
+   // Mesh and discretization parameters
    args.AddOption(&mesh_file, "-m", "--mesh",
                   "Mesh file to use.");
    args.AddOption(&ref_file, "-rf", "--ref-file",
@@ -68,19 +68,18 @@ int main(int argc, char *argv[])
    args.AddOption(&ref_levels, "-r", "--refine",
                   "Number of times to refine the mesh.");
 
+   // Problem parameters
+   args.AddOption(&weak_bdr, "-wbc", "--weak-bdr",
+                  "List of boundaries where Dirichelet BCs are enforced weakly."
+                  "\n - Default: strong Dirichelet BCs");
+   args.AddOption(&outflow_bdr, "-out", "--outflow-bdr",
+                  "List of outflow boundaries.");
    args.AddOption(&lib_file, "-l", "--lib",
                   "Library file to use for IC, BC, force and solution function defintions.");
-
    args.AddOption(&mu_param, "-m", "--mu",
                   "Sets the diffusion parameters, should be positive.");
 
-
-   args.AddOption(&weak_bdr, "-wbc", "--weak-bdr",
-                  "Weak boundary.");
-
-   args.AddOption(&outflow_bdr, "-out", "--outflow-bdr",
-                  "Outflow boundary");
-
+   // Solver parameters
    args.AddOption(&ode_solver_type, "-s", "--ode-solver",
                   "...");
    args.AddOption(&t_final, "-tf", "--t-final",
@@ -88,6 +87,7 @@ int main(int argc, char *argv[])
    args.AddOption(&dt, "-dt", "--time-step",
                   "Time step.");
 
+   // Parse parameters
    args.Parse();
    if (!args.Good())
    {
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
    Mesh mesh(mesh_file, 1, 1);
    int dim = mesh.Dimension();
 
-   // Refine
+   // Refine mesh
    {
       if (mesh.NURBSext && (strlen(ref_file) != 0))
       {
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
       if (Mpi::Root()) { mesh.PrintInfo(); }
    }
 
-   // Partition
+   // Partition mesh
    ParMesh pmesh(MPI_COMM_WORLD, mesh);
    mesh.Clear();
 
@@ -152,9 +152,9 @@ int main(int argc, char *argv[])
       }
    }
 
-   // Assign boundary conditions
+   // 6. Boundary conditions
 
-   // Condition given boundaries
+   // Sort given boundaries
    weak_bdr.Sort();
    weak_bdr.Unique();
 
@@ -173,6 +173,7 @@ int main(int argc, char *argv[])
       }
    }
 
+   // Assign remaining boundaries to the strong boundary list
    int amax = spaces[0]->GetMesh()->bdr_attributes.Max();
 
    strong_bdr.SetSize(amax - weak_bdr.Size() - outflow_bdr.Size());
@@ -189,7 +190,7 @@ int main(int argc, char *argv[])
             continue;
          }
       }
-      // Boundary in outlfow list -- skip
+      // Boundary in outflow list -- skip
       if (outflow_bdr.Size() > o)
       {
          if (outflow_bdr[o] == b)
@@ -199,11 +200,12 @@ int main(int argc, char *argv[])
          }
       }
 
-      // Assign to strong
+      // Assign to strong list
       strong_bdr[s] = b;
       s++;
    }
 
+   // Report boundary assignments
    if (Mpi::Root())
    {
       if (strong_bdr.Size() > 0)
@@ -223,7 +225,7 @@ int main(int argc, char *argv[])
       }
    }
 
-   // 6. Define the solution vector xp as a finite element grid function
+   // 7. Define the solution vector xp as a finite element grid function
    Array<int> bOffsets(3);
    bOffsets[0] = 0;
    bOffsets[1] = spaces[0]->TrueVSize();
@@ -250,7 +252,7 @@ int main(int argc, char *argv[])
    visit_dc.SetCycle(0);
    visit_dc.Save();
 
-   // 7. Define the time stepping algorithm
+   // 8. Define the time stepping algorithm
    // Set up the preconditioner
    //Array<Solver *> sol_array({new HypreSmoother(),
    //         new HypreEuclid()});
@@ -281,7 +283,6 @@ int main(int argc, char *argv[])
    newton_solver.SetMaxIter(10);
    newton_solver.SetSolver(j_gmres);
 
-   // 7. Define the weka form
    // Define the physical parameters
    LibCoefficient mu(lib_file, "mu", false, mu_param);
    LibVectorCoefficient force(dim, lib_file, "force");
