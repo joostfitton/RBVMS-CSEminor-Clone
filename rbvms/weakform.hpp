@@ -27,6 +27,7 @@ private:
    // Physical parameters
    Coefficient &c_mu;
    VectorCoefficient &c_force;
+   VectorCoefficient &c_sol;
 
    /// Numerical parameters
    real_t dt = -1.0;
@@ -37,7 +38,7 @@ private:
    Array2D<int> hmap;
 
    /// Physical values
-   mutable Vector u, dudt, f, grad_p, res_m, up, nor;
+   mutable Vector u, dudt, f, grad_p, res_m, up, nor, traction;
    mutable DenseMatrix flux;
 
    /// Solution & Residual vector
@@ -51,6 +52,7 @@ public:
    /// Constructor
    IncNavStoIntegrator(Coefficient &mu_,
                        VectorCoefficient &force_,
+                       VectorCoefficient &sol_,
                        Tau &tau);
 
    /// Set the timestep size @a dt_
@@ -59,6 +61,7 @@ public:
       dt = dt_;
       c_mu.SetTime(t);
       c_force.SetTime(t);
+      c_sol.SetTime(t);
    };
 
    /// Find the local CFL-number

@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
    RBVMS::Tau tau(adv, mu);
 
    // Define evolution
-   RBVMS::IncNavStoIntegrator integrator(mu, force, tau);
+   RBVMS::IncNavStoIntegrator integrator(mu, force, sol, tau);
    RBVMS::ParTimeDepBlockNonlinForm form(spaces, integrator);
 
    form.SetStrongBC (strong_bdr);

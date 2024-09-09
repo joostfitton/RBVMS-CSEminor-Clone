@@ -13,8 +13,9 @@ using namespace RBVMS;
 // Constructor
 IncNavStoIntegrator::IncNavStoIntegrator(Coefficient &mu,
                                          VectorCoefficient &force,
+                                         VectorCoefficient &sol,
                                          Tau &tm)
-   : c_mu(mu), c_force(force), tau_m(tm)
+   : c_mu(mu), c_force(force), c_sol(sol), tau_m(tm)
 {
    dim = force.GetVDim();
    u.SetSize(dim);
@@ -22,6 +23,7 @@ IncNavStoIntegrator::IncNavStoIntegrator(Coefficient &mu,
    f.SetSize(dim);
    res_m.SetSize(dim);
    up.SetSize(dim);
+   traction.SetSize(dim);
    grad_u.SetSize(dim);
    hess_u.SetSize(dim, (dim*(dim+1))/2);
    grad_p.SetSize(dim);
@@ -420,7 +422,6 @@ void IncNavStoIntegrator
                         const Array<const Vector *> &elsol,
                         const Array<Vector *> &elvec)
 {
-
    int dof_u = el1[0]->GetDof();
 
    elvec[0]->SetSize(dof_u*dim);
@@ -433,9 +434,9 @@ void IncNavStoIntegrator
 
    int intorder = 2*el1[0]->GetOrder();
    const IntegrationRule &ir = IntRules.Get(Tr.GetGeometryType(), intorder);
-   for (int p = 0; p < ir.GetNPoints(); p++)
+   for (int i = 0; i < ir.GetNPoints(); i++)
    {
-      const IntegrationPoint &ip = ir.IntPoint(p);
+      const IntegrationPoint &ip = ir.IntPoint(i);
 
       // Set the integration point in the face and the neighboring element
       Tr.SetAllIntPoints(&ip);
@@ -475,9 +476,9 @@ void IncNavStoIntegrator
    int intorder = 2*el1[0]->GetOrder();
    const IntegrationRule &ir = IntRules.Get(Tr.GetGeometryType(), intorder);
 
-   for (int p = 0; p < ir.GetNPoints(); p++)
+   for (int i = 0; i < ir.GetNPoints(); i++)
    {
-      const IntegrationPoint &ip = ir.IntPoint(p);
+      const IntegrationPoint &ip = ir.IntPoint(i);
 
       // Set the integration point in the face and the neighboring element
       Tr.SetAllIntPoints(&ip);
@@ -487,7 +488,8 @@ void IncNavStoIntegrator
 
       CalcOrtho(Tr.Jacobian(), nor);
 
-      real_t w = ip.weight * 0.5;//Tr.Weight();
+      //real_t w = ip.weight * Tr.Weight(); //
+      real_t w = ip.weight * 0.5;// instead???
 
       el1[0]->CalcPhysShape(*Tr.Elem1, sh_u);
       elf_u.MultTranspose(sh_u, u);
@@ -516,12 +518,80 @@ void IncNavStoIntegrator
 ::AssembleWeakDirBCVector(const Array<const FiniteElement *> &el1,
                           const Array<const FiniteElement *> &el2,
                           FaceElementTransformations &Tr,
-                          const Array<const Vector *> &elfun,
-                          const Array<Vector *> &elvect)
+                          const Array<const Vector *> &elsol,
+                          const Array<Vector *> &elvec)
 {
+   int dof_u = el1[0]->GetDof();
+   int dof_p = el1[1]->GetDof();
 
+   elvec[0]->SetSize(dof_u*dim);
+   elvec[1]->SetSize(dof_p);
+
+   *elvec[0] = 0.0;
+   *elvec[1] = 0.0;
+
+   elf_u.UseExternalData(elsol[0]->GetData(), dof_u, dim);
+   elv_u.UseExternalData(elvec[0]->GetData(), dof_u, dim);
+
+   sh_u.SetSize(dof_u);
+
+   int intorder = 2*el1[0]->GetOrder();
+   const IntegrationRule &ir = IntRules.Get(Tr.GetGeometryType(), intorder);
+   for (int i = 0; i < ir.GetNPoints(); i++)
+   {
+      const IntegrationPoint &ip = ir.IntPoint(i);
+
+      // Set the integration point in the face and the neighboring element
+      Tr.SetAllIntPoints(&ip);
+
+      // Access the neighboring element's integration point
+      const IntegrationPoint &eip = Tr.GetElement1IntPoint();
+
+      real_t mu = c_mu.Eval(*Tr.Elem1, eip);
+      c_sol.Eval(up, *Tr.Elem1, eip);
+
+      CalcOrtho(Tr.Jacobian(), nor);
+      nor /= nor.Norml2();
+
+      real_t w = ip.weight * Tr.Weight();
+
+      el1[0]->CalcPhysShape(*Tr.Elem1, sh_u);
+      elf_u.MultTranspose(sh_u, u);
+
+      up -= u;
+      up.Neg();
+      real_t un = up*nor;
+
+      el1[0]->CalcPhysDShape(*Tr.Elem1, shg_u);
+      MultAtB(elf_u, shg_u, grad_u);
+      grad_u.Symmetrize();  // Grad to strain
+
+      el1[1]->CalcPhysShape(*Tr.Elem1, sh_p);
+      real_t p = sh_p*(*elsol[1]);
+
+      Vector hn_vec(dim);
+      //??T.InverseJacobian().Mult(nor,hn_vec);
+      real_t Cb = 12.0;
+      real_t lambda   = Cb*mu*hn_vec.Norml2();
+      real_t lambda_n = 0.0;
+
+      // Traction
+      grad_u.Mult(nor, traction);
+      traction *= -2*mu;              // Consistency
+      traction.Add(p, nor);          // Pressure
+      traction.Add(lambda,up);       // Penalty
+      traction.Add(lambda_n*un,nor); // Penalty -- normal
+      AddMult_a_VWt(w, sh_u, traction, elv_u);
+
+      // Dual consistency
+      MultVWt(nor,up, flux);
+      flux.Symmetrize();
+      AddMult_a_ABt(-w*2*mu, shg_u, flux, elv_u);
+
+      // Continuity
+      elvec[1]->Add(w*un, sh_p);
+   }
 }
-
 
 // Assemble the weak Dirichlet BC boundary gradient matrices
 void IncNavStoIntegrator
@@ -529,7 +599,7 @@ void IncNavStoIntegrator
                         Array<const FiniteElement *>&el1,
                         const Array<const FiniteElement *>&el2,
                         FaceElementTransformations &Tr,
-                        const Array<const Vector *> &elfun,
+                        const Array<const Vector *> &elsol,
                         const Array2D<DenseMatrix *> &elmats)
 {
 
