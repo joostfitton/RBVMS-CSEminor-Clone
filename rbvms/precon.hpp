@@ -25,9 +25,9 @@ protected:
 
 public:
    /// Constructor
-   JacobianPreconditioner(Array<int> &offsets, Array<Solver *> p)
-      : BlockLowerTriangularPreconditioner (offsets), prec(p)
-   { MFEM_VERIFY(offsets.Size()-1 == p.Size(), ""); };
+   JacobianPreconditioner(Array<int> &offsets)
+      : BlockLowerTriangularPreconditioner (offsets), prec(offsets.Size()-1)
+   { prec = nullptr;};
 
    /// Set the diagonal and off-diagonal operators
    virtual void SetOperator(const Operator &op);
