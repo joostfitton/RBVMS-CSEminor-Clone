@@ -35,10 +35,22 @@ public:
    Evolution(ParTimeDepBlockNonlinForm &form,
              Solver &solver);
 
+
+   // Stub for explicit solve of time dependent problem
+   virtual void Mult(const Vector &x, Vector &k) const override { k = 0.0;};
+
+
    // Solve time dependent problem
    virtual void ImplicitSolve(const real_t dt,
                               const Vector &x,
                               Vector &k) override;
+
+   // Get the CFL Number
+   real_t GetCFL() const;
+
+   // Get the Force on each of the boundaries
+   void GetForce(DenseMatrix &force);
+
    /// Destructor
    ~Evolution() {}
 };
@@ -58,15 +70,26 @@ private:
    /// Numerical parameters
    real_t dt;
 
+   Array<int> strongBCBdr;
+   Array<int> weakBCBdr;
+   Array<int> outflowBdr;
+
    /// Solution & Residual vector
    mutable Vector x0, x;
    mutable BlockVector dxs;
    mutable BlockVector dxs_true;
 
+   /// Conservative boundary forces
+   mutable DenseMatrix bdrForce;
+
 public:
    /// Constructor
    ParTimeDepBlockNonlinForm(Array<ParFiniteElementSpace *> &pfes,
                              RBVMS::IncNavStoIntegrator &integrator);
+
+   void SetStrongBC (Array<int> strong_bdr);
+   void SetWeakBC   (Array<int> weak_bdr);
+   void SetOutflowBC(Array<int> outflow_bdr);
 
    /// Set the solution of the previous time step @a x0
    /// and the timestep size @a dt of the current solve.
@@ -76,6 +99,8 @@ public:
 
    /// Get the CFL-Number
    real_t GetCFL() const;
+
+   DenseMatrix& GetForce() { return bdrForce;};
 
    /// Specialized version of GetEnergy() for BlockVectors
    //real_t GetEnergyBlocked(const BlockVector &bx) const;

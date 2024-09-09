@@ -30,12 +30,69 @@ void Evolution::ImplicitSolve(const real_t dt,
    dudt_ = dudt;
 }
 
+//
+real_t Evolution::GetCFL() const
+{
+   return form.GetCFL();
+}
+
+//
+void Evolution::GetForce(DenseMatrix &force)
+{
+
+   DenseMatrix &bf = form.GetForce();
+   force.SetSize(bf.Height(), bf.Width());
+   force = bf;
+}
+
 // Formulation Constructor
 ParTimeDepBlockNonlinForm::
    ParTimeDepBlockNonlinForm(Array<ParFiniteElementSpace *> &pfes,
                              RBVMS::IncNavStoIntegrator &integrator)
    : ParBlockNonlinearForm(pfes), integrator(integrator)
 {
+}
+
+// Set the boundaries were strong Dirichlet BCs are imposed
+void ParTimeDepBlockNonlinForm::SetStrongBC (Array<int> strong_bdr)
+{
+
+   strong_bdr.Copy(strongBCBdr);
+
+   // Translate indices
+   Array<Array<int> *> ess_bdr(2);
+   Array<int> ess_bdr_u(fes[0]->GetMesh()->bdr_attributes.Max());
+   Array<int> ess_bdr_p(fes[1]->GetMesh()->bdr_attributes.Max());
+
+   ess_bdr_u = 0;
+   ess_bdr_p = 0;
+
+   for (int b = 0; b < strongBCBdr.Size(); ++b)
+   {
+      ess_bdr_u[strongBCBdr[b]-1] = 1;
+   }
+
+   ess_bdr[0] = &ess_bdr_u;
+   ess_bdr[1] = &ess_bdr_p;
+
+   // Dummy rhs
+   Array<Vector *> rhs(2);
+   rhs = nullptr;
+
+   // Enforce BCs using function form parent class
+   SetEssentialBC(ess_bdr, rhs);
+}
+
+// Set the boundaries were weak Dirichlet BCs are imposed
+void ParTimeDepBlockNonlinForm::SetWeakBC   (Array<int> weak_bdr)
+{
+   weak_bdr.Copy(weakBCBdr);
+}
+
+// Set the outflow boundaries
+void ParTimeDepBlockNonlinForm::SetOutflowBC(Array<int> outflow_bdr)
+{
+   outflow_bdr.Copy(outflowBdr);
 }
 
 // Set the solution of the previous time step
@@ -70,7 +127,7 @@ real_t ParTimeDepBlockNonlinForm::GetCFL() const
    }
    real_t tmp = cfl;
 
-   MPI_Allreduce(&tmp, &cfl, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+   MPI_Allreduce(&tmp, &cfl, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
    return cfl;
 }
@@ -96,13 +153,15 @@ void ParTimeDepBlockNonlinForm::Mult(const Vector &dx, Vector &y) const
       fes[s]->GetProlongationMatrix()->Mult(
          dxs_true.GetBlock(s), dxs.GetBlock(s));
    }
+
+   // Actual assembly
    MultBlocked(xs, dxs, ys);
 
+   // Finalize assembly
    for (int s=0; s<fes.Size(); ++s)
    {
       fes[s]->GetProlongationMatrix()->MultTranspose(
          ys.GetBlock(s), ys_true.GetBlock(s));
-
       ys_true.GetBlock(s).SetSubVector(*ess_tdofs[s], 0.0);
    }
 
@@ -171,13 +230,18 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
       }
    }
 
-   // Domain boundary Outflow or Weak Dirichlet
+   // Domain boundary Outflow
    for (int i = 0; i < mesh->GetNBE(); ++i)
    {
+      // Determine if boundary is outflow
       const int bdr_attr = mesh->GetBdrAttribute(i);
-
-      if ( bdr_attr != 4) { continue; }
-
+      bool outflow = false;
+      for (int b=0; b<outflowBdr.Size(); ++b)
+      {
+        if ( bdr_attr == outflowBdr[b]) { outflow = true; }
+      }
+      if ( !outflow ) { continue; }
+      // Perform assembly over outflow
       Tr = mesh->GetBdrFaceTransformations(i);
       if (Tr != NULL)
       {
@@ -191,7 +255,6 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
          }
 
          integrator.AssembleOutflowVector(fe, fe2, *Tr, el_x_const, el_y);
-         //integrator->AssembleWeakDirBcVector(fe, fe2, *tr, el_x_const, el_y);
          for (int s=0; s<fes.Size(); ++s)
          {
             if (el_y[s]->Size() == 0) { continue; }
@@ -199,6 +262,64 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
          }
       }
    }
+
+   // Conservative force extraction
+   fes[0]->GetProlongationMatrix()->MultTranspose(by.GetBlock(0),
+                                                  ys_true.GetBlock(0));
+
+   int nbdr = fes[0]->GetMesh()->bdr_attributes.Max();
+   bdrForce.SetSize(nbdr,fes[0]->GetVDim());
+   Array<int> dofs, bdr(nbdr);
+   Vector vrhs;
+   for (int b=0; b<nbdr; ++b)
+   {
+      bdr = 0; bdr[b] = 1;
+      for (int v=0; v<fes[0]->GetVDim(); ++v)
+      {
+         fes[0]->GetEssentialTrueDofs(bdr, dofs, v);
+         ys_true.GetBlock(0).GetSubVector(dofs, vrhs);
+         bdrForce(b,v) = vrhs.Sum();
+      }
+   }
+   DenseMatrix tmp(bdrForce);
+   MPI_Allreduce(tmp.GetData(), bdrForce.GetData(), nbdr*fes[0]->GetVDim(),
+                 MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+
+   // Domain boundary weak Dirichelet BC
+/*   for (int i = 0; i < mesh->GetNBE(); ++i)
+   {
+      // Determine if boundary is outflow
+      const int bdr_attr = mesh->GetBdrAttribute(i);
+      bool weakBC = false;
+      for (int b=0; b<outflowBdr.Size(); ++b)
+      {
+         if ( bdr_attr == outflowBdr[b]) { weakBC = true; }
+      }
+      if ( !weakBC ) { continue; }
+
+      // Perform assembly over Dirichlet boundary
+      Tr = mesh->GetBdrFaceTransformations(i);
+      if (Tr != NULL)
+      {
+         for (int s=0; s<fes.Size(); ++s)
+         {
+            fe[s] = fes[s]->GetFE(Tr->Elem1No);
+            fe2[s] = fes[s]->GetFE(Tr->Elem1No);
+
+            fes[s]->GetElementVDofs(Tr->Elem1No, *(vdofs[s]));
+            bx.GetBlock(s).GetSubVector(*(vdofs[s]), *el_x[s]);
+         }
+
+       //  integrator.AssembleWeakDirBcVector(fe, fe2, *Tr, el_x_const, el_y);
+         for (int s=0; s<fes.Size(); ++s)
+         {
+            if (el_y[s]->Size() == 0) { continue; }
+            by.GetBlock(s).AddElementVector(*(vdofs[s]), *el_y[s]);
+         }
+      }
+   }*/
+
 
    for (int s=0; s<fes.Size(); ++s)
    {
@@ -210,6 +331,7 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
 
    by.SyncFromBlocks();
 }
+
 
 // Get Gradient
 BlockOperator & ParTimeDepBlockNonlinForm::GetGradient(const Vector &x) const
