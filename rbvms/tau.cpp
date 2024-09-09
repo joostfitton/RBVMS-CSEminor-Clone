@@ -23,7 +23,7 @@ void Tau::Eval(Vector &tau,
    real_t mu = c_mu.Eval(T, ip);
    c_adv.Eval(u, T, ip);
 
-   MultAAt(T.InverseJacobian(),Gij);
+   MultAtB(T.InverseJacobian(),T.InverseJacobian(),Gij);
 
    real_t tau_t = Ct/(dt*dt);
    real_t tau_c = 0.0;
@@ -39,7 +39,7 @@ void Tau::Eval(Vector &tau,
    {
       for (int i = 0; i < dim; i++)
       {
-         tau[0]  += Cd*Gij(i,j)*Gij(i,j)*mu*mu;
+         tau_d  += Cd*Gij(i,j)*Gij(i,j)*mu*mu;
       }
    }
 
