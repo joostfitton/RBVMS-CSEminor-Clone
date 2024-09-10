@@ -547,7 +547,7 @@ void IncNavStoIntegrator
       // Access the neighboring element's integration point
       const IntegrationPoint &eip = Tr.GetElement1IntPoint();
 
-      real_t mu = 0.0;//c_mu.Eval(*Tr.Elem1, eip);
+      real_t mu = c_mu.Eval(*Tr.Elem1, eip);
       c_sol.Eval(up, *Tr.Elem1, eip);
 
       CalcOrtho(Tr.Jacobian(), nor);
@@ -570,24 +570,23 @@ void IncNavStoIntegrator
       real_t p = sh_p*(*elsol[1]);
 
       Vector hn_vec(dim);
-      //??T.InverseJacobian().Mult(nor,hn_vec);
-      real_t Cb = 12.0;
-      real_t lambda   = 1000.0;//Cb*mu*hn_vec.Norml2();
+      Tr.Elem1->InverseJacobian().Mult(nor,hn_vec);
+      real_t Cb = 120.0;
+      real_t lambda   = Cb*mu*hn_vec.Norml2();
       real_t lambda_n = 0.0;
 
       // Traction
-     // grad_u.Mult(nor, traction);
-     // traction *= -2*mu;              // Consistency
-       traction = 0.0;//
+      grad_u.Mult(nor, traction);
+      traction *= -2*mu;              // Consistency
       traction.Add(p, nor);          // Pressure
       traction.Add(lambda,up);       // Penalty
-     // traction.Add(lambda_n*un,nor); // Penalty -- normal
+      traction.Add(lambda_n*un,nor); // Penalty -- normal
       AddMult_a_VWt(w, sh_u, traction, elv_u);
 
       // Dual consistency
-    //  MultVWt(nor,up, flux);
-    //  flux.Symmetrize();
-   //   AddMult_a_ABt(-w*2*mu, shg_u, flux, elv_u);
+      MultVWt(nor,up, flux);
+      flux.Symmetrize();
+      AddMult_a_ABt(-w*2*mu, shg_u, flux, elv_u);
 
       // Continuity
       elvec[1]->Add(-w*un, sh_p);
@@ -637,7 +636,7 @@ void IncNavStoIntegrator
 
       // Access the neighboring element's integration point
       const IntegrationPoint &eip = Tr.GetElement1IntPoint();
-      real_t mu = 0.0; //;c_mu.Eval(*Tr.Elem1, eip);
+      real_t mu = c_mu.Eval(*Tr.Elem1, eip);
       CalcOrtho(Tr.Jacobian(), nor);
       nor /= nor.Norml2();
 
@@ -657,9 +656,9 @@ void IncNavStoIntegrator
     //  real_t p = sh_p*(*elsol[1]);
 
       Vector hn_vec(dim);
-      //??T.InverseJacobian().Mult(nor,hn_vec);
-      real_t Cb = 12.0;
-      real_t lambda   = 1000.0;//Cb*mu*hn_vec.Norml2();
+      Tr.Elem1->InverseJacobian().Mult(nor,hn_vec);
+      real_t Cb = 120.0;
+      real_t lambda   = Cb*mu*hn_vec.Norml2();
       real_t lambda_n = 0.0;
 
 
