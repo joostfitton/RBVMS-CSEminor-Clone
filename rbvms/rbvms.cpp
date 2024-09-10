@@ -410,6 +410,7 @@ int main(int argc, char *argv[])
          visit_dc.SetTime(t);
          visit_dc.Save();
       }
+      x_u.Distribute(xp.GetBlock(0)); // Due to adv???!!!--> other mech!!
    }
    os.close();
 
