@@ -25,14 +25,14 @@ void sol_u(double *coord, int dim, double time, double *u, int vdim)
    y = coord[1] - 3.0;
    r = sqrt(x*x + y*y);
    r0 = 1.0;
-   u[0] + 2.0*fmax(0.0, r0 - r);
+   u[0] += 2.0*fmax(0.0, r0 - r);
 
    // Disturbance 2
    x = coord[0] + 3.0;
    y = coord[1];
    r = sqrt(x*x + y*y);
    r0 = 1.0;
-   u[1] + 2.0*fmax(0.0, r0 - r);
+   u[1] += 2.0*fmax(0.0, r0 - r);
 
 }
 
