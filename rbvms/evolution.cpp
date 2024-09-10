@@ -239,6 +239,7 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
         if ( bdr_attr == outflowBdr[b]) { outflow = true; }
       }
       if ( !outflow ) { continue; }
+
       // Perform assembly over outflow
       Tr = mesh->GetBdrFaceTransformations(i);
       if (Tr != NULL)
@@ -290,9 +291,9 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
       // Determine if boundary is outflow
       const int bdr_attr = mesh->GetBdrAttribute(i);
       bool weakBC = false;
-      for (int b=0; b<outflowBdr.Size(); ++b)
+      for (int b=0; b<weakBCBdr.Size(); ++b)
       {
-         if ( bdr_attr == outflowBdr[b]) { weakBC = true; }
+         if ( bdr_attr == weakBCBdr[b]) { weakBC = true; }
       }
       if ( !weakBC ) { continue; }
 
@@ -517,12 +518,19 @@ void ParTimeDepBlockNonlinForm
       }
    }
 
-   // Domain boundary Outflow or Weak Dirichlet
+
+
+   // Domain boundary Outflow
    for (int i = 0; i < mesh->GetNBE(); ++i)
    {
+      // Determine if boundary is outflow
       const int bdr_attr = mesh->GetBdrAttribute(i);
-
-      if ( bdr_attr != 4) { continue; }
+      bool outflow = false;
+      for (int b=0; b<outflowBdr.Size(); ++b)
+      {
+        if ( bdr_attr == outflowBdr[b]) { outflow = true; }
+      }
+      if ( !outflow ) { continue; }
 
       Tr = mesh->GetBdrFaceTransformations(i);
       if (Tr != NULL)
@@ -537,6 +545,44 @@ void ParTimeDepBlockNonlinForm
          }
 
          integrator.AssembleOutflowGrad(fe, fe2, *Tr, el_x_const, elmats);
+         for (int l=0; l<fes.Size(); ++l)
+         {
+            for (int j=0; j<fes.Size(); ++j)
+            {
+               if (elmats(j,l)->Height() == 0) { continue; }
+               Grads(j,l)->AddSubMatrix(*vdofs[j], *vdofs[l],
+                                        *elmats(j,l), skip_zeros);
+            }
+         }
+      }
+   }
+
+
+   // Domain boundary weak Dirichlet BC
+   for (int i = 0; i < mesh->GetNBE(); ++i)
+   {
+      // Determine if boundary is outflow
+      const int bdr_attr = mesh->GetBdrAttribute(i);
+      bool weakBC = false;
+      for (int b=0; b<weakBCBdr.Size(); ++b)
+      {
+         if ( bdr_attr == weakBCBdr[b]) { weakBC = true; }
+      }
+      if ( !weakBC ) { continue; }
+
+      Tr = mesh->GetBdrFaceTransformations(i);
+      if (Tr != NULL)
+      {
+         for (int s = 0; s < fes.Size(); ++s)
+         {
+            fe[s] = fes[s]->GetFE(Tr->Elem1No);
+            fe2[s] = fe[s];
+
+            fes[s]->GetElementVDofs(Tr->Elem1No, *vdofs[s]);
+            bx.GetBlock(s).GetSubVector(*vdofs[s], *el_x[s]);
+         }
+
+         integrator.AssembleWeakDirBCGrad(fe, fe2, *Tr, el_x_const, elmats);
          for (int l=0; l<fes.Size(); ++l)
          {
             for (int j=0; j<fes.Size(); ++j)

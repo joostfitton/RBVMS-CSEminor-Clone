@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 
    // Solver parameters
    args.AddOption(&ode_solver_type, "-s", "--ode-solver",
-                  "...");
+                  "Time integrator");
    args.AddOption(&t_final, "-tf", "--t-final",
                   "Final time; start time is 0.");
    args.AddOption(&dt, "-dt", "--time-step",
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
    {
       for (int b = 0; b < weak_bdr.Size(); b++)
       {
-         if (outflow_bdr.FindSorted(weak_bdr[b]))
+         if (outflow_bdr.FindSorted(weak_bdr[b]) != -1)
          {
             mfem_error("Same boundary specified for outflow and weak Dirichlet");
          }
