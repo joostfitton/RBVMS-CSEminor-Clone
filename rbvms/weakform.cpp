@@ -547,7 +547,7 @@ void IncNavStoIntegrator
       // Access the neighboring element's integration point
       const IntegrationPoint &eip = Tr.GetElement1IntPoint();
 
-      real_t mu = c_mu.Eval(*Tr.Elem1, eip);
+      real_t mu = 0.0;//c_mu.Eval(*Tr.Elem1, eip);
       c_sol.Eval(up, *Tr.Elem1, eip);
 
       CalcOrtho(Tr.Jacobian(), nor);
@@ -572,24 +572,25 @@ void IncNavStoIntegrator
       Vector hn_vec(dim);
       //??T.InverseJacobian().Mult(nor,hn_vec);
       real_t Cb = 12.0;
-      real_t lambda   = Cb*mu*hn_vec.Norml2();
+      real_t lambda   = 1000.0;//Cb*mu*hn_vec.Norml2();
       real_t lambda_n = 0.0;
 
       // Traction
-      grad_u.Mult(nor, traction);
-      traction *= -2*mu;              // Consistency
+     // grad_u.Mult(nor, traction);
+     // traction *= -2*mu;              // Consistency
+       traction = 0.0;//
       traction.Add(p, nor);          // Pressure
       traction.Add(lambda,up);       // Penalty
-      traction.Add(lambda_n*un,nor); // Penalty -- normal
+     // traction.Add(lambda_n*un,nor); // Penalty -- normal
       AddMult_a_VWt(w, sh_u, traction, elv_u);
 
       // Dual consistency
-      MultVWt(nor,up, flux);
-      flux.Symmetrize();
-      AddMult_a_ABt(-w*2*mu, shg_u, flux, elv_u);
+    //  MultVWt(nor,up, flux);
+    //  flux.Symmetrize();
+   //   AddMult_a_ABt(-w*2*mu, shg_u, flux, elv_u);
 
       // Continuity
-      elvec[1]->Add(w*un, sh_p);
+      elvec[1]->Add(-w*un, sh_p);
    }
 }
 
@@ -602,5 +603,134 @@ void IncNavStoIntegrator
                         const Array<const Vector *> &elsol,
                         const Array2D<DenseMatrix *> &elmats)
 {
+   int dof_u = el1[0]->GetDof();
+   int dof_p = el1[1]->GetDof();
 
+   elf_u.UseExternalData(elsol[0]->GetData(), dof_u, dim);
+
+   elmats(0,0)->SetSize(dof_u*dim, dof_u*dim);
+   elmats(0,1)->SetSize(dof_u*dim, dof_p);
+   elmats(1,0)->SetSize(dof_p, dof_u*dim);
+   elmats(1,1)->SetSize(dof_p, dof_p);
+
+   *elmats(0,0) = 0.0;
+   *elmats(0,1) = 0.0;
+   *elmats(1,0) = 0.0;
+   *elmats(1,1) = 0.0;
+
+   sh_u.SetSize(dof_u);
+   shg_u.SetSize(dof_u, dim);
+   ushg_u.SetSize(dof_u);
+   dupdu.SetSize(dof_u);
+   sh_p.SetSize(dof_p);
+   shg_p.SetSize(dof_p, dim);
+
+   int intorder = 2*el1[0]->GetOrder();
+   const IntegrationRule &ir = IntRules.Get(Tr.GetGeometryType(), intorder);
+
+   for (int i = 0; i < ir.GetNPoints(); i++)
+   {
+      const IntegrationPoint &ip = ir.IntPoint(i);
+
+      // Set the integration point in the face and the neighboring element
+      Tr.SetAllIntPoints(&ip);
+
+      // Access the neighboring element's integration point
+      const IntegrationPoint &eip = Tr.GetElement1IntPoint();
+      real_t mu = 0.0; //;c_mu.Eval(*Tr.Elem1, eip);
+      CalcOrtho(Tr.Jacobian(), nor);
+      nor /= nor.Norml2();
+
+      real_t w = ip.weight * Tr.Weight(); //
+      //real_t w = ip.weight * 0.5;// instead???
+
+      el1[0]->CalcPhysShape(*Tr.Elem1, sh_u);
+      elf_u.MultTranspose(sh_u, u);
+
+    //  real_t un = u*nor;
+
+      el1[0]->CalcPhysDShape(*Tr.Elem1, shg_u);
+    //  MultAtB(elf_u, shg_u, grad_u);
+   //   grad_u.Symmetrize();  // Grad to strain
+
+      el1[1]->CalcPhysShape(*Tr.Elem1, sh_p);
+    //  real_t p = sh_p*(*elsol[1]);
+
+      Vector hn_vec(dim);
+      //??T.InverseJacobian().Mult(nor,hn_vec);
+      real_t Cb = 12.0;
+      real_t lambda   = 1000.0;//Cb*mu*hn_vec.Norml2();
+      real_t lambda_n = 0.0;
+
+
+/*
+      // Traction
+      grad_u.Mult(nor, traction);
+      traction *= -2*mu;             // Consistency
+      traction.Add(p, nor);          // Pressure
+      traction.Add(lambda,up);       // Penalty
+      traction.Add(lambda_n*un,nor); // Penalty -- normal
+      AddMult_a_VWt(w, sh_u, traction, elv_u);
+
+      // Dual consistency
+      MultVWt(nor,up, flux);
+      flux.Symmetrize();
+      AddMult_a_ABt(-w*2*mu, shg_u, flux, elv_u);
+
+      // Continuity
+      elvec[1]->Add(w*un, sh_p);
+
+*/
+
+      // Momentum - Velocity block (w,u)
+      for (int i_u = 0; i_u < dof_u; ++i_u)
+      {
+         for (int j_u = 0; j_u < dof_u; ++j_u)
+         {
+
+            /*for (int i_dim = 0; i_dim < dim; ++i_dim)
+            {
+               for (int j_dim = 0; j_dim < dim; ++j_dim)
+               {
+                  (*elmats(0,0))(i_u + i_dim*dof_u, j_u + j_dim*dof_u)
+                  += mu*shg_u(i_u,i_dim)*shg_u(j_u,j_dim)*w*dt;
+               }
+            }*/
+
+            // Penalty
+            real_t mat = sh_u(i_u)*sh_u(j_u)*lambda*w*dt;
+
+            for (int dim_u = 0; dim_u < dim; ++dim_u)
+            {
+               (*elmats(0,0))(i_u + dim_u*dof_u, j_u + dim_u*dof_u) += mat;
+            }
+         }
+      }
+
+      // Momentum - Pressure block (w,p)
+      for (int i_p = 0; i_p < dof_p; ++i_p)
+      {
+         for (int j_u = 0; j_u < dof_u; ++j_u)
+         {
+            for (int dim_u = 0; dim_u < dim; ++dim_u)
+            {
+               (*elmats(0,1))(j_u + dof_u * dim_u, i_p)
+               += sh_u(j_u)*nor(dim_u)*sh_p(i_p)*w*dt;
+            }
+         }
+      }
+
+      // Continuity - Velocity block (q,u)
+      for (int i_p = 0; i_p < dof_p; ++i_p)
+      {
+         for (int j_u = 0; j_u < dof_u; ++j_u)
+         {
+            for (int dim_u = 0; dim_u < dim; ++dim_u)
+            {
+               (*elmats(1,0))(i_p, j_u + dof_u * dim_u)
+               -= sh_p(i_p)*sh_u(j_u)*nor(dim_u)*w*dt;
+            }
+         }
+      }
+   }
 }
