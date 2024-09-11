@@ -153,76 +153,60 @@ int main(int argc, char *argv[])
    }
 
    // 6. Boundary conditions
+   int amax = spaces[0]->GetMesh()->bdr_attributes.Max();
+   Array<bool> bnd_flag(amax+1);
+   bnd_flag = false;
 
-   // Sort given boundaries
-   weak_bdr.Sort();
-   weak_bdr.Unique();
-
-   outflow_bdr.Sort();
-   outflow_bdr.Unique();
-
-   // Check for overlap between weak and outflow boundaries
-   if ((weak_bdr.Size() > 0) && (outflow_bdr.Size() > 0))
+   // Check weak boundaries
+   if (Mpi::Root() && weak_bdr.Size() > 0 )
    {
-      for (int b = 0; b < weak_bdr.Size(); b++)
+      cout<<"Weak    = ";weak_bdr.Print();
+   }
+   for (int b = 0; b < weak_bdr.Size(); b++)
+   {
+      if ( weak_bdr[b] < 0 || weak_bdr[b] > amax )
       {
-         if (outflow_bdr.FindSorted(weak_bdr[b]) != -1)
-         {
-            mfem_error("Same boundary specified for outflow and weak Dirichlet");
-         }
+         mfem_error("Boundary out of range.");
       }
+      if (bnd_flag[weak_bdr[b]])
+      {
+         mfem_error("Boundary specified more then once.");
+      }
+      bnd_flag[weak_bdr[b]] = true;
    }
 
-   // Assign remaining boundaries to the strong boundary list
-   int amax = spaces[0]->GetMesh()->bdr_attributes.Max();
+   // Check outflow boundaries
+   if (Mpi::Root() && outflow_bdr.Size() > 0)
+   {
+      cout<<"Outflow = "; outflow_bdr.Print();
+   }
+   for (int b = 0; b < outflow_bdr.Size(); b++)
+   {
+      if ( outflow_bdr[b] < 0 || outflow_bdr[b] > amax )
+      {
+         mfem_error("Boundary out of range.");
+      }
+      if (bnd_flag[outflow_bdr[b]])
+      {
+         mfem_error("Boundary specified more then once.");
+      }
+      bnd_flag[outflow_bdr[b]] = true;
+   }
 
+   // Assign strong boundaries
    strong_bdr.SetSize(amax - weak_bdr.Size() - outflow_bdr.Size());
    strong_bdr = -9;
-
-   for (int b = 1, w = 0, o = 0, s = 0; b < amax+1; b++)
+   for (int b = 1, s = 0; b < amax+1; b++)
    {
-      // Boundary in weak list --skip
-      if (weak_bdr.Size() > w)
+      if (!bnd_flag[b])
       {
-         if (weak_bdr[w] == b)
-         {
-            w++;
-            continue;
-         }
+         strong_bdr[s] = b;
+         s++;
       }
-      // Boundary in outflow list -- skip
-      if (outflow_bdr.Size() > o)
-      {
-         if (outflow_bdr[o] == b)
-         {
-            o++;
-            continue;
-         }
-      }
-
-      // Assign to strong list
-      strong_bdr[s] = b;
-      s++;
    }
-
-   // Report boundary assignments
-   if (Mpi::Root())
+   if (Mpi::Root() && strong_bdr.Size() > 0)
    {
-      if (strong_bdr.Size() > 0)
-      {
-         cout<<"Strong  = ";
-         strong_bdr.Print();
-      }
-      if (weak_bdr.Size() > 0)
-      {
-         cout<<"Weak    = ";
-         weak_bdr.Print();
-      }
-      if (outflow_bdr.Size() > 0)
-      {
-         cout<<"Outflow = ";
-         outflow_bdr.Print();
-      }
+      cout<<"Strong  = ";strong_bdr.Print();
    }
 
    // 7. Define the solution vector xp as a finite element grid function
@@ -254,12 +238,10 @@ int main(int argc, char *argv[])
 
    // 8. Define the time stepping algorithm
    // Set up the preconditioner
-   //Array<Solver *> sol_array({new HypreSmoother(),
-   //         new HypreEuclid()});
-   RBVMS::JacobianPreconditioner jac_prec(bOffsets);// sol_array);
+   RBVMS::JacobianPreconditioner jac_prec(bOffsets);
 
    // Set up the Jacobian solver
-   RBVMS::GeneralResidualMonitor j_monitor(MPI_COMM_WORLD,"\t\t\t\tFGMRES", 25);
+   RBVMS::GeneralResidualMonitor j_monitor(MPI_COMM_WORLD,"\t\tFGMRES", 25);
    FGMRESSolver j_gmres(MPI_COMM_WORLD);
    j_gmres.iterative_mode = false;
    j_gmres.SetRelTol(1e-3);
@@ -324,33 +306,37 @@ int main(int argc, char *argv[])
    ode_solver->Init(evo);
 
    // 9. Actual time integration
-   real_t cfl, t = 0.0;
+   real_t t = 0.0;
    bool done = false;
-   DenseMatrix bdrForce;
    char dimName[] = "xyz";
-   //evo.GetForce(exforce);
 
    std::ostringstream filename;
    filename << "force" << ".dat";
 
    std::ofstream os;
    if (Mpi::Root()) { os.open(filename.str().c_str()); }
+   auto line = [](int len)
+   {
+      for (int b=0; b<len; ++b) { cout<<"-"; }
+      cout<<"\n";
+   };
+
    for (int ti = 0; !done; )
    {
       real_t dt_real = min(dt, t_final - t);
       tau.SetTimeStep(dt_real);
       if (Mpi::Root())
       {
-         cout<<"----------------------------------------\n";
+         line(80);
          cout<<"time step: " << ti << ", time: " << t << endl;
-         cout<<"----------------------------------------\n";
+         line(80);
       }
       ode_solver->Step(xp, t, dt_real);
       ti++;
       done = (t >= t_final - 1e-8*dt);
 
-      cfl = evo.GetCFL();
-      evo.GetForce(bdrForce);
+      real_t cfl = evo.GetCFL();
+      DenseMatrix bdrForce = evo.GetForce();
       if (Mpi::Root())
       {
          // Print to file
@@ -364,44 +350,47 @@ int main(int argc, char *argv[])
          os<<"\n"<< std::flush;
 
          // Print to screen
-         cout<<"----------------------------------------\n";
+         line(80);
          cout<<"cfl = "<<cfl<<endl;
-         cout<<"----------------------------------------\n";
+         line(80);
 
-         cout<<"\n +";
-         for (int b=0; b<10+12*nbdr; ++b) { cout<<"-"; }
-         cout<<"+\n";
+         auto pline = [](int len)
+         {
+            cout<<" +";
+            for (int b=0; b<len; ++b) { cout<<"-"; }
+            cout<<"+\n";
+         };
+
+         cout<<"\n";
+         pline(10+13*nbdr);
          cout<<" | Boundary | ";
          for (int b=0; b<nbdr; ++b)
          {
-            cout<<std::setw(9);
-            cout<<b<<" | ";
+            cout<<std::setw(10)<<b<<" | ";
          }
-         cout<<"\n +";
-         for (int b=0; b<10+12*nbdr; ++b) { cout<<"-"; }
-         cout<<"+\n";
+         cout<<"\n";
+         pline(10+13*nbdr);
          for (int v=0; v<dim; ++v)
          {
             cout<<" | Force "<<dimName[v]<<"  | ";
             for (int b=0; b<nbdr; ++b)
             {
-               cout<<std::defaultfloat<<std::setprecision(4)<<std::setw(9);
+               cout<<std::defaultfloat<<std::setprecision(4)<<std::setw(10);
                cout<<bdrForce(b,v)<<" | ";
             }
             cout<<"\n";
          }
-         cout<<" +";
-         for (int b=0; b<10+12*nbdr; ++b) { cout<<"-"; }
-         cout<<"+\n\n"<< std::flush;
+         pline(10+13*nbdr);
+         cout<<"\n"<<std::flush;
       }
 
       if (done || ti % vis_steps == 0)
       {
          if (Mpi::Root())
          {
-            cout<<"----------------------------------------\n";
+            line(80);
             cout << "Visit output: Cycle " << ti << "\t Time: " << t << endl;
-            cout<<"----------------------------------------\n";
+            line(80);
          }
          x_u.Distribute(xp.GetBlock(0));
          x_p.Distribute(xp.GetBlock(1));
