@@ -35,7 +35,7 @@ To install RBVMS on a Ubuntu-based machine make sure the appropriate packages ar
 This can be done using the following command:
 
 ```
-sudo apt-get install cmake git build-essential openmpi metis
+sudo apt-get install cmake git build-essential openmpi-common libopenmpi-dev libmetis5
 ```
 
 The RBVMS code can be downloaded using the following command
