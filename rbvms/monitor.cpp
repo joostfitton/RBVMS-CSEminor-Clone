@@ -39,11 +39,11 @@ void GeneralResidualMonitor::MonitorResidual(int it,
 
    if ((print_level > 0) && (( it%print_level == 0) || final))
    {
-      mfem::out<<prefix<<" iteration "<<std::setw(2)<<it
-               <<" : ||r|| = "
-               <<std::setw(8)<<std::defaultfloat<<std::setprecision(4)
+      mfem::out<<prefix<<" iteration "<<std::setw(3)<<it
+               <<": ||r|| = "
+               <<std::setw(8)<<std::defaultfloat<<std::setprecision(3)
                <<norm
-               <<",  ||r||/||r_0|| = "
+               <<", ||r||/||r_0|| = "
                <<std::setw(6)<<std::fixed<<std::setprecision(2)
                <<100*norm/norm0<<" %\n";
    }
@@ -88,13 +88,13 @@ void SystemResidualMonitor::MonitorResidual(int it,
    if (print)
    {
       mfem::out << prefix << " iteration " << std::setw(3) << it <<"\n"
-                << " ||r||  \t"<< "||r||/||r_0||  \n";
+                << " ||r||  \t"<< "||r||/||r_0||\n";
       for (int i = 0; i < nvar; ++i)
       {
          mfem::out<<std::setw(8)<<std::defaultfloat<<std::setprecision(4)
                   <<vnorm[i]<<"\t"
-                  <<std::setw(6)<<std::fixed<<std::setprecision(2)
-                  <<100*vnorm[i]/norm0[i]<<" % \n";
+                  <<std::setw(8)<<std::fixed<<std::setprecision(2)
+                  <<100*vnorm[i]/norm0[i]<<" %\n";
       }
    }
    mfem::out<<std::flush;
