@@ -101,7 +101,6 @@ public:
       GetLibFunction(libName, vector<string>({funName}), required);
    }
 
-
    /** Get a @a funNames C-function from the @a libName library
         - @a libName path+name of the library to use.
         - @a funNames list of function names to look for in the library.
