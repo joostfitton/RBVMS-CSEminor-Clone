@@ -35,21 +35,19 @@ public:
    Evolution(ParTimeDepBlockNonlinForm &form,
              Solver &solver);
 
-
-   // Stub for explicit solve of time dependent problem
+   /// Stub for explicit solve of time dependent problem
    virtual void Mult(const Vector &x, Vector &k) const override { k = 0.0;};
 
-
-   // Solve time dependent problem
+   /// Solve time dependent problem
    virtual void ImplicitSolve(const real_t dt,
                               const Vector &x,
                               Vector &k) override;
 
-   // Get the CFL Number
+   /// Get the CFL Number
    real_t GetCFL() const;
 
-   // Get the Force on each of the boundaries
-   void GetForce(DenseMatrix &force);
+   /// Get the Force on each of the boundaries
+   DenseMatrix GetForce();
 
    /// Destructor
    ~Evolution() {}

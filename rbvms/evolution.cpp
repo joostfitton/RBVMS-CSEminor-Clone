@@ -37,11 +37,9 @@ real_t Evolution::GetCFL() const
 }
 
 // Get the boundary forces from the formulation
-void Evolution::GetForce(DenseMatrix &force)
+DenseMatrix Evolution::GetForce()
 {
-   DenseMatrix &bf = form.GetForce();
-   force.SetSize(bf.Height(), bf.Width());
-   force = bf;
+   return form.GetForce();
 }
 
 // Formulation Constructor
