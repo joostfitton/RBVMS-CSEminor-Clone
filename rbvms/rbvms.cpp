@@ -69,11 +69,15 @@ int main(int argc, char *argv[])
    // Problem parameters
    args.AddOption(&weak_bdr, "-wbc", "--weak-bdr",
                   "List of boundaries where Dirichelet BCs are enforced weakly."
-                  "\n - Default: strong Dirichelet BCs");
+                  "\n\t - Default: strong Dirichelet BCs");
    args.AddOption(&outflow_bdr, "-out", "--outflow-bdr",
                   "List of outflow boundaries.");
    args.AddOption(&lib_file, "-l", "--lib",
-                  "Library file to use for IC, BC, force and solution function defintions.");
+                  "Library file for case specific function definitions:\n\t"
+                  " - Initial condition\n\t"
+                  " - Boundary condition\n\t"
+                  " - Forcing\n\t"
+                  " - Diffusion\n\t");
    args.AddOption(&mu_param, "-m", "--mu",
                   "Sets the diffusion parameters, should be positive.");
 
