@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 
    // Solver parameters
    args.AddOption(&ode_solver_type, "-s", "--ode-solver",
-                  "Time integrator");
+                  ODESolver::Types.c_str());
    args.AddOption(&t_final, "-tf", "--t-final",
                   "Final time; start time is 0.");
    args.AddOption(&dt, "-dt", "--time-step",
@@ -122,8 +122,8 @@ int main(int argc, char *argv[])
 
    // 4. Define a finite element space on the mesh.
    Array<FiniteElementCollection *> fecs(2);
-   fecs[0] = new H1_FECollection(order, dim);
-   fecs[1] = new H1_FECollection(order, dim);
+   fecs[0] = FECollection::NewH1(order, dim, pmesh.IsNURBS());
+   fecs[1] = FECollection::NewH1(order, dim, pmesh.IsNURBS());
 
    Array<ParFiniteElementSpace *> spaces(2);
    spaces[0] = new ParFiniteElementSpace(&pmesh, fecs[0],
@@ -283,24 +283,7 @@ int main(int argc, char *argv[])
    form.SetOutflowBC(outflow_bdr);
 
    // Select the time integrator
-   ODESolver *ode_solver = NULL;
-   switch (ode_solver_type)
-   {
-      // Implicit (L-stable) methods
-      case 11: ode_solver = new BackwardEulerSolver; break;
-      case 12: ode_solver = new SDIRK23Solver(2); break;
-      case 13: ode_solver = new SDIRK33Solver; break;
-      // Implicit A-stable methods (not L-stable)
-      case 22: ode_solver = new ImplicitMidpointSolver; break;
-      case 23: ode_solver = new SDIRK23Solver; break;
-      case 24: ode_solver = new SDIRK34Solver; break;
-
-      case 35: ode_solver = new GeneralizedAlphaSolver(0.5); break;
-
-      default:
-         cout << "Unknown ODE solver type: " << ode_solver_type << '\n';
-         mfem_error("Can not continue");
-   }
+   unique_ptr<ODESolver> ode_solver = ODESolver::Select(ode_solver_type);
    ode_solver->Init(evo);
 
    // 9. Actual time integration
