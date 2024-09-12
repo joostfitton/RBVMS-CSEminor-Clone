@@ -502,8 +502,6 @@ void ParTimeDepBlockNonlinForm
       }
    }
 
-
-
    // Domain boundary Outflow
    for (int i = 0; i < mesh->GetNBE(); ++i)
    {
@@ -540,7 +538,6 @@ void ParTimeDepBlockNonlinForm
          }
       }
    }
-
 
    // Domain boundary weak Dirichlet BC
    for (int i = 0; i < mesh->GetNBE(); ++i)

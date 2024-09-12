@@ -15,7 +15,6 @@ set(SOURCES
     evolution.cpp
     monitor.cpp
     precon.cpp
-    tau.cpp
     weakform.cpp
     printInfo.cpp)
 
@@ -24,7 +23,6 @@ set(HEADERS
     evolution.hpp
     monitor.hpp
     precon.hpp
-    tau.hpp
     weakform.hpp
     buildInfo.hpp)
 

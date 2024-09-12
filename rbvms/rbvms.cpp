@@ -27,16 +27,14 @@ extern void printInfo();
 
 int main(int argc, char *argv[])
 {
-   // 1. Initialize MPI and HYPRE.
+   // 1. Initialize MPI and HYPRE and print info
    Mpi::Init(argc, argv);
    int num_procs = Mpi::WorldSize();
    int myid = Mpi::WorldRank();
    Hypre::Init();
-
-   // 2. Print relevant info
    printInfo();
 
-   // 3. Parse command-line options.
+   // 2. Parse command-line options.
    const char *mesh_file = "../../mfem/data/inline-quad.mesh";
    const char *ref_file  = "";
    int order = 1;
@@ -96,7 +94,7 @@ int main(int argc, char *argv[])
    }
    if (Mpi::Root()) { args.PrintOptions(cout); }
 
-   // 4. Read the mesh from the given mesh file.
+   // 3. Read the mesh from the given mesh file.
    Mesh mesh(mesh_file, 1, 1);
    int dim = mesh.Dimension();
 
@@ -118,7 +116,7 @@ int main(int argc, char *argv[])
    ParMesh pmesh(MPI_COMM_WORLD, mesh);
    mesh.Clear();
 
-   // 5. Define a finite element space on the mesh.
+   // 4. Define a finite element space on the mesh.
    Array<FiniteElementCollection *> fecs(2);
    fecs[0] = new H1_FECollection(order, dim);
    fecs[1] = new H1_FECollection(order, dim);
@@ -152,7 +150,73 @@ int main(int argc, char *argv[])
       }
    }
 
-   // 6. Boundary conditions
+   // 5. Define the solution vector, grid function and output
+   Array<int> bOffsets(3);
+   bOffsets[0] = 0;
+   bOffsets[1] = spaces[0]->TrueVSize();
+   bOffsets[2] = spaces[1]->TrueVSize();
+   bOffsets.PartialSum();
+
+   BlockVector xp(bOffsets);
+
+   // Define the gridfunctions
+   ParGridFunction x_u(spaces[0]);
+   ParGridFunction x_p(spaces[1]);
+
+   LibVectorCoefficient sol(dim, lib_file, "sol_u");
+   x_u.ProjectCoefficient(sol);
+   x_p = 0.0;
+
+   x_u.GetTrueDofs(xp.GetBlock(0));
+   x_p.GetTrueDofs(xp.GetBlock(1));
+
+   // Define the visualisation output
+   VisItDataCollection visit_dc("navsto", &pmesh);
+   visit_dc.RegisterField("u", &x_u);
+   visit_dc.RegisterField("p", &x_p);
+   visit_dc.SetCycle(0);
+   visit_dc.SetTime(0.0);
+   visit_dc.Save();
+
+   // 6. Define the time stepping algorithm
+
+   // Set up the preconditioner
+   RBVMS::JacobianPreconditioner jac_prec(bOffsets);
+
+   // Set up the Jacobian solver
+   RBVMS::GeneralResidualMonitor j_monitor(MPI_COMM_WORLD,"\t\tFGMRES", 25);
+   FGMRESSolver j_gmres(MPI_COMM_WORLD);
+   j_gmres.iterative_mode = false;
+   j_gmres.SetRelTol(1e-3);
+   j_gmres.SetAbsTol(1e-12);
+   j_gmres.SetMaxIter(300);
+   j_gmres.SetPrintLevel(-1);
+   j_gmres.SetMonitor(j_monitor);
+   j_gmres.SetPreconditioner(jac_prec);
+
+   // Set up the Newton solver
+   RBVMS::SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,
+                                               "Newton", 1,
+                                               bOffsets);
+   NewtonSolver newton_solver(MPI_COMM_WORLD);
+   newton_solver.iterative_mode = true;
+   newton_solver.SetPrintLevel(-1);
+   newton_solver.SetMonitor(newton_monitor);
+   newton_solver.SetRelTol(1e-3);
+   newton_solver.SetAbsTol(1e-8);
+   newton_solver.SetMaxIter(10);
+   newton_solver.SetSolver(j_gmres);
+
+   // Define the physical parameters
+   LibCoefficient mu(lib_file, "mu", false, mu_param);
+   LibVectorCoefficient force(dim, lib_file, "force");
+
+   // Define weak form and evolution
+   RBVMS::IncNavStoIntegrator integrator(mu, force, sol);
+   RBVMS::ParTimeDepBlockNonlinForm form(spaces, integrator);
+   RBVMS::Evolution evo(form, newton_solver);
+
+   //Boundary conditions
    int amax = spaces[0]->GetMesh()->bdr_attributes.Max();
    Array<bool> bnd_flag(amax+1);
    bnd_flag = false;
@@ -209,80 +273,10 @@ int main(int argc, char *argv[])
       cout<<"Strong  = ";strong_bdr.Print();
    }
 
-   // 7. Define the solution vector xp as a finite element grid function
-   Array<int> bOffsets(3);
-   bOffsets[0] = 0;
-   bOffsets[1] = spaces[0]->TrueVSize();
-   bOffsets[2] = spaces[1]->TrueVSize();
-   bOffsets.PartialSum();
-
-   BlockVector xp(bOffsets);
-
-   // Define the gridfunctions
-   ParGridFunction x_u(spaces[0]);
-   ParGridFunction x_p(spaces[1]);
-
-   LibVectorCoefficient sol(dim, lib_file, "sol_u");
-   x_u.ProjectCoefficient(sol);
-   x_p = 0.0;
-
-   x_u.GetTrueDofs(xp.GetBlock(0));
-   x_p.GetTrueDofs(xp.GetBlock(1));
-
-   // Define the visualisation output
-   VisItDataCollection visit_dc("navsto", &pmesh);
-   visit_dc.RegisterField("u", &x_u);
-   visit_dc.RegisterField("p", &x_p);
-   visit_dc.SetCycle(0);
-   visit_dc.Save();
-
-   // 8. Define the time stepping algorithm
-   // Set up the preconditioner
-   RBVMS::JacobianPreconditioner jac_prec(bOffsets);
-
-   // Set up the Jacobian solver
-   RBVMS::GeneralResidualMonitor j_monitor(MPI_COMM_WORLD,"\t\tFGMRES", 25);
-   FGMRESSolver j_gmres(MPI_COMM_WORLD);
-   j_gmres.iterative_mode = false;
-   j_gmres.SetRelTol(1e-3);
-   j_gmres.SetAbsTol(1e-12);
-   j_gmres.SetMaxIter(300);
-   j_gmres.SetPrintLevel(-1);
-   j_gmres.SetMonitor(j_monitor);
-   j_gmres.SetPreconditioner(jac_prec);
-
-   // Set up the newton solver
-   Array<ParGridFunction *> pgf_array({&x_u, &x_p});
-   RBVMS::SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,
-                                               "Newton", 1,
-                                               bOffsets);
-   NewtonSolver newton_solver(MPI_COMM_WORLD);
-   newton_solver.iterative_mode = true;
-   newton_solver.SetPrintLevel(-1);
-   newton_solver.SetMonitor(newton_monitor);
-   newton_solver.SetRelTol(1e-3);
-   newton_solver.SetAbsTol(1e-8);
-   newton_solver.SetMaxIter(10);
-   newton_solver.SetSolver(j_gmres);
-
-   // Define the physical parameters
-   LibCoefficient mu(lib_file, "mu", false, mu_param);
-   LibVectorCoefficient force(dim, lib_file, "force");
-
-   // Define the stabilisation parameters
-   ///V//ectorGridFunctionCoefficient adv(&x_u);
-   // ElasticInverseEstimateCoefficient invEst(spaces[0]);
-   //RBVMS::Tau tau(adv, mu);
-
-   // Define evolution
-   RBVMS::IncNavStoIntegrator integrator(mu, force, sol);
-   RBVMS::ParTimeDepBlockNonlinForm form(spaces, integrator);
-
+   // Set boundaries in the weakform
    form.SetStrongBC (strong_bdr);
    form.SetWeakBC   (weak_bdr);
    form.SetOutflowBC(outflow_bdr);
-
-   RBVMS::Evolution evo(form, newton_solver);
 
    // Select the time integrator
    ODESolver *ode_solver = NULL;
@@ -399,7 +393,7 @@ int main(int argc, char *argv[])
          visit_dc.SetTime(t);
          visit_dc.Save();
       }
-      x_u.Distribute(xp.GetBlock(0)); // Due to adv???!!!--> other mech!!
+
    }
    os.close();
 
