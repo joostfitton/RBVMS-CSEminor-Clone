@@ -4,4 +4,4 @@
 [submodule "mfem"]
 	path = mfem
 	url = git@github.com:IdoAkkerman/mfem.git
-	branch = rbvms-9-2024
+	branch = origin/rbvms-9-2024
