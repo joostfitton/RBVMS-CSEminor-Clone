@@ -67,6 +67,7 @@ private:
 
    /// Numerical parameters
    real_t dt;
+   mutable real_t cfl;
 
    Array<int> strongBCBdr;
    Array<int> weakBCBdr;
@@ -96,7 +97,7 @@ public:
                            const Vector &x0);
 
    /// Get the CFL-Number
-   real_t GetCFL() const;
+   real_t GetCFL() { return cfl;};
 
    /// Get the conservative boundary forces
    DenseMatrix& GetForce() { return bdrForce;};

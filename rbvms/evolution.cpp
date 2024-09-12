@@ -103,30 +103,7 @@ void ParTimeDepBlockNonlinForm::SetTimeAndSolution(const real_t t,
    integrator.SetTimeAndStep(t,dt);
 }
 
-real_t ParTimeDepBlockNonlinForm::GetCFL() const
-{
-   real_t cfl = 0.0;
 
-   Array<const FiniteElement *> fe(fes.Size());
-   ElementTransformation *T;
-
-   for (int i = 0; i < fes[0]->GetNE(); ++i)
-   {
-      T = fes[0]->GetElementTransformation(i);
-      for (int s = 0; s < fes.Size(); ++s)
-      {
-         fe[s] = fes[s]->GetFE(i);
-      }
-
-      cfl = fmax(cfl, integrator.GetElementCFL(fe, *T));
-
-   }
-   real_t tmp = cfl;
-
-   MPI_Allreduce(&tmp, &cfl, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-
-   return cfl;
-}
 
 // Block T-Vector to Block T-Vector
 void ParTimeDepBlockNonlinForm::Mult(const Vector &dx, Vector &y) const
@@ -163,6 +140,16 @@ void ParTimeDepBlockNonlinForm::Mult(const Vector &dx, Vector &y) const
 
    ys_true.SyncFromBlocks();
    y.SyncMemory(ys_true);
+
+   // Comminucate CFL
+   real_t tmp = cfl;
+   MPI_Allreduce(&tmp, &cfl, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+   // Comminucate boundary force
+   DenseMatrix tmpDM(bdrForce);
+   MPI_Allreduce(tmpDM.GetData(), bdrForce.GetData(),
+                 bdrForce.NumRows()*bdrForce.NumCols(),
+                 MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 
 // Specialized version of Mult() for BlockVectors
@@ -187,6 +174,8 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
    by.UseDevice(true);
    by = 0.0;
    by.SyncToBlocks();
+   real_t el_cfl;
+   cfl = 0.0;
    for (int s=0; s<fes.Size(); ++s)
    {
       el_x_const[s] = el_x[s] = new Vector();
@@ -216,8 +205,9 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
       integrator.AssembleElementVector(fe, *T,
                                        el_x_const,
                                        el_dx_const,
-                                       el_y);
-
+                                       el_y,
+                                       el_cfl);
+      cfl = fmax(cfl, el_cfl);
       for (int s=0; s<fes.Size(); ++s)
       {
          if (el_y[s]->Size() == 0) { continue; }
@@ -278,10 +268,6 @@ void ParTimeDepBlockNonlinForm::MultBlocked(const BlockVector &bx,
          bdrForce(b,v) = vrhs.Sum();
       }
    }
-   DenseMatrix tmp(bdrForce);
-   MPI_Allreduce(tmp.GetData(), bdrForce.GetData(), nbdr*fes[0]->GetVDim(),
-                 MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
 
    // Domain boundary weak Dirichelet BC
    for (int i = 0; i < mesh->GetNBE(); ++i)

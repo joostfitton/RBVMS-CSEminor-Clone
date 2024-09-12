@@ -270,12 +270,12 @@ int main(int argc, char *argv[])
    LibVectorCoefficient force(dim, lib_file, "force");
 
    // Define the stabilisation parameters
-   VectorGridFunctionCoefficient adv(&x_u);
+   ///V//ectorGridFunctionCoefficient adv(&x_u);
    // ElasticInverseEstimateCoefficient invEst(spaces[0]);
-   RBVMS::Tau tau(adv, mu);
+   //RBVMS::Tau tau(adv, mu);
 
    // Define evolution
-   RBVMS::IncNavStoIntegrator integrator(mu, force, sol, tau);
+   RBVMS::IncNavStoIntegrator integrator(mu, force, sol);
    RBVMS::ParTimeDepBlockNonlinForm form(spaces, integrator);
 
    form.SetStrongBC (strong_bdr);
@@ -324,7 +324,7 @@ int main(int argc, char *argv[])
    for (int ti = 0; !done; )
    {
       real_t dt_real = min(dt, t_final - t);
-      tau.SetTimeStep(dt_real);
+
       if (Mpi::Root())
       {
          line(80);
