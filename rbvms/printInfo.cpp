@@ -22,13 +22,19 @@
 using namespace std;
 using namespace mfem;
 
+void line(int len)
+{
+   for (int b=0; b<len; ++b) { cout<<"-"; }
+   cout<<"\n";
+}
+
 // Function for printing compile time and runtime information.
 void printInfo()
 {
    if (Mpi::Root())
    {
       // Print header
-      cout<<"----------------------------------------\n";
+      line(80);
       cout<<R"(    _____  ______      ____  __  _____  )"<<endl;
       cout<<R"(   |  __ \|  _ \ \    / /  \/  |/ ____| )"<<endl;
       cout<<R"(   | |__) | |_) \ \  / /| \  / | (___   )"<<endl;
@@ -38,15 +44,15 @@ void printInfo()
       cout<<R"(                                        )"<<endl;
 
       // Build info
-      cout<<"----------------------------------------\n";
+      line(80);
       cout<<"Compile time info\n";
-      cout<<"----------------------------------------\n";
+      line(80);
       cout<< buildInfo.str() << endl;
 
       // Run info
-      cout<<"----------------------------------------\n";
+      line(80);
       cout<<"Run time info"<<endl;
-      cout<<"----------------------------------------\n\n";
+      line(80); cout<<endl;
       time_t     now = time(0);
       struct tm  tstruct = *localtime(&now);
       char       time[80], host[80];
@@ -66,7 +72,7 @@ void printInfo()
          cout<<i<<": "<<host<<endl;
       }
 
-      cout<<"\n----------------------------------------\n\n";
+      cout<<endl; line(80); cout<<endl;
    }
    else
    {
