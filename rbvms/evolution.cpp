@@ -103,8 +103,6 @@ void ParTimeDepBlockNonlinForm::SetTimeAndSolution(const real_t t,
    integrator.SetTimeAndStep(t,dt);
 }
 
-
-
 // Block T-Vector to Block T-Vector
 void ParTimeDepBlockNonlinForm::Mult(const Vector &dx, Vector &y) const
 {
