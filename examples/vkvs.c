@@ -35,8 +35,6 @@ void sol_u(double *coord, int dim, double time, double *u, int vdim)
    r0 = 1.0;
    u[0] -= 0.5*fmax(0.0, r0 - r);
    u[1] += 2.0*fmax(0.0, r0 - r);
-
-
 }
 
 void force(double *coord, int dim, double time, double *force, int vdim)
