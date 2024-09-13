@@ -355,11 +355,13 @@ int main(int argc, char *argv[])
       {
          std::ifstream in("restart/step.dat", std::ifstream::in);
          in>>t>>si>>ri>>vi;
+         in>>dt;
          in.close();
          cout<<"Restarting from step "<<ri-1<<endl;
       }
       // Synchronize
       MPI_Bcast(&t , 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&dt , 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
       MPI_Bcast(&si, 1, MPI_INT, 0, MPI_COMM_WORLD);
       MPI_Bcast(&ri, 1, MPI_INT, 0, MPI_COMM_WORLD);
       MPI_Bcast(&vi, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -461,6 +463,7 @@ int main(int argc, char *argv[])
             cout<<"+\n";
          };
 
+         // Print boundary header
          cout<<"\n";
          pline(10+13*nbdr);
          cout<<" | Boundary | ";
@@ -470,6 +473,8 @@ int main(int argc, char *argv[])
          }
          cout<<"\n";
          pline(10+13*nbdr);
+
+         // Print actual forces
          char dimName[] = "xyz";
          for (int v=0; v<dim; ++v)
          {
