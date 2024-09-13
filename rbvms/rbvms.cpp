@@ -20,6 +20,8 @@
 #include "precon.hpp"
 #include "monitor.hpp"
 
+#include <sys/stat.h>
+
 using namespace std;
 using namespace mfem;
 
@@ -35,38 +37,30 @@ int main(int argc, char *argv[])
    printInfo();
 
    // 2. Parse command-line options.
+   OptionsParser args(argc, argv);
+
+   // Mesh and discretization parameters
    const char *mesh_file = "../../mfem/data/inline-quad.mesh";
    const char *ref_file  = "";
    int order = 1;
    int ref_levels = 0;
-
-   real_t mu_param = 1.0;
-   real_t penalty = -1.0;
-
-   const char *lib_file = "libfun.so";
-
-   int ode_solver_type = 35;
-   real_t dt = 0.01;
-   real_t t_final = 10.0;
-   int vis_steps = 10;
-
-   Array<int> strong_bdr;
-   Array<int> weak_bdr;
-   Array<int> outflow_bdr;
-
-   OptionsParser args(argc, argv);
-
-   // Mesh and discretization parameters
    args.AddOption(&mesh_file, "-m", "--mesh",
                   "Mesh file to use.");
    args.AddOption(&ref_file, "-rf", "--ref-file",
                   "File with refinement data");
-   args.AddOption(&order, "-o", "--order",
-                  "Finite element order isoparametric space.");
    args.AddOption(&ref_levels, "-r", "--refine",
                   "Number of times to refine the mesh.");
+   args.AddOption(&order, "-o", "--order",
+                  "Finite element order isoparametric space.");
 
    // Problem parameters
+   Array<int> strong_bdr;
+   Array<int> weak_bdr;
+   Array<int> outflow_bdr;
+
+   real_t mu_param = 1.0;
+   const char *lib_file = "libfun.so";
+
    args.AddOption(&weak_bdr, "-wbc", "--weak-bdr",
                   "List of boundaries where Dirichelet BCs are enforced weakly."
                   "\n\t - Default: strong Dirichelet BCs");
@@ -82,12 +76,26 @@ int main(int argc, char *argv[])
                   "Sets the diffusion parameters, should be positive.");
 
    // Solver parameters
+   int ode_solver_type = 35;
+   real_t dt = 0.01;
+   real_t t_final = 10.0;
    args.AddOption(&ode_solver_type, "-s", "--ode-solver",
                   ODESolver::Types.c_str());
    args.AddOption(&t_final, "-tf", "--t-final",
                   "Final time; start time is 0.");
    args.AddOption(&dt, "-dt", "--time-step",
                   "Time step.");
+
+   // Solution input/output params
+   bool restart = false;
+   int restart_interval = 10;
+   int vis_interval = 1;
+   args.AddOption(&restart, "-rs", "--restart", "-f", "--fresh",
+                  "Restart from solution.");
+   args.AddOption(&restart_interval, "-ri", "--restart-interval",
+                  "Interval between archieved time steps.");
+   args.AddOption(&vis_interval, "-vi", "--vis-interval",
+                  "Interval between visualized time steps.");
 
    // Parse parameters
    args.Parse();
@@ -143,11 +151,14 @@ int main(int argc, char *argv[])
       MPI_Reduce(tdof.GetData(), pdof.GetData(), num_procs,
                  MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
 
+
+      tdof[0] = spaces[0]->GlobalTrueVSize();
+      tdof[1] = spaces[1]->GlobalTrueVSize();
       if (Mpi::Root())
       {
          mfem::out << "Number of finite element unknowns:\n";
-         mfem::out << "\tVelocity = "<<spaces[0]->GlobalTrueVSize() << endl;
-         mfem::out << "\tPressure = "<<spaces[1]->GlobalTrueVSize() << endl;
+         mfem::out << "\tVelocity = "<<tdof[0] << endl;
+         mfem::out << "\tPressure = "<<tdof[1] << endl;
          mfem::out << "Number of finite element unknowns per partition:\n";
          mfem::out <<  "\tVelocity = "; udof.Print(mfem::out, num_procs);
          mfem::out <<  "\tPressure = "; pdof.Print(mfem::out, num_procs);
@@ -162,25 +173,83 @@ int main(int argc, char *argv[])
    bOffsets.PartialSum();
 
    BlockVector xp(bOffsets);
+   BlockVector dxp(bOffsets);
 
    // Define the gridfunctions
    ParGridFunction x_u(spaces[0]);
    ParGridFunction x_p(spaces[1]);
+   int nstate = 1;
+   Array<ParGridFunction*> dx_u(nstate);
+   Array<ParGridFunction*> dx_p(nstate);
 
-   LibVectorCoefficient sol(dim, lib_file, "sol_u");
-   x_u.ProjectCoefficient(sol);
-   x_p = 0.0;
-
-   x_u.GetTrueDofs(xp.GetBlock(0));
-   x_p.GetTrueDofs(xp.GetBlock(1));
+    for (int i = 0; i < nstate; i++)
+    {
+       dx_u[i] = new ParGridFunction(spaces[0]);
+       dx_p[i] = new ParGridFunction(spaces[1]);
+    }
 
    // Define the visualisation output
-   VisItDataCollection visit_dc("navsto", &pmesh);
-   visit_dc.RegisterField("u", &x_u);
-   visit_dc.RegisterField("p", &x_p);
-   visit_dc.SetCycle(0);
-   visit_dc.SetTime(0.0);
-   visit_dc.Save();
+   VisItDataCollection vdc("step", &pmesh);
+   vdc.SetPrefixPath("solution");
+   vdc.RegisterField("u", &x_u);
+   vdc.RegisterField("p", &x_p);
+
+   VisItDataCollection rdc("step", &pmesh);
+   rdc.SetPrefixPath("restart");
+   rdc.SetPrecision(18);
+
+   real_t t;
+   int si, ri, vi;
+   struct stat info;
+   if (restart && stat("restart/step.dat", &info) == 0)
+   {
+      // Read
+      if (Mpi::Root())
+      {
+         std::ifstream in("restart/step.dat", std::ifstream::in);
+         in>>t>>si>>ri>>vi;
+         in.close();
+      }
+      // Synchronize
+      MPI_Bcast(&t , 1, MPI_INT, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&si, 1, MPI_INT, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&ri, 1, MPI_INT, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&vi, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+      // Open data files
+      rdc.Load(ri-1);
+
+      x_u = *rdc.GetField("u");
+      x_p = *rdc.GetField("p");
+
+      x_u.GetTrueDofs(xp.GetBlock(0));
+      x_p.GetTrueDofs(xp.GetBlock(1));
+
+      *dx_u[0] = *rdc.GetField("du");
+      *dx_p[0] = *rdc.GetField("dp");
+
+      dx_u[0]->GetTrueDofs(dxp.GetBlock(0));
+      dx_p[0]->GetTrueDofs(dxp.GetBlock(1));
+   }
+   else
+   {
+      t = 0.0; si = 0; ri = 0; vi = 0;
+      LibVectorCoefficient sol(dim, lib_file, "sol_u");
+      x_u.ProjectCoefficient(sol);
+      x_p = 0.0;
+
+      x_u.GetTrueDofs(xp.GetBlock(0));
+      x_p.GetTrueDofs(xp.GetBlock(1));
+
+      vdc.SetCycle(0);
+      vdc.SetTime(0.0);
+      vdc.Save();
+
+      rdc.RegisterField("u", &x_u);
+      rdc.RegisterField("p", &x_p);
+      rdc.RegisterField("du", dx_u[0]);
+      rdc.RegisterField("dp", dx_p[0]);
+   }
 
    // 6. Define the time stepping algorithm
 
@@ -212,6 +281,7 @@ int main(int argc, char *argv[])
    newton_solver.SetSolver(j_gmres);
 
    // Define the physical parameters
+   LibVectorCoefficient sol(dim, lib_file, "sol_u");
    LibCoefficient mu(lib_file, "mu", false, mu_param);
    LibVectorCoefficient force(dim, lib_file, "force");
 
@@ -285,9 +355,13 @@ int main(int argc, char *argv[])
    // Select the time integrator
    unique_ptr<ODESolver> ode_solver = ODESolver::Select(ode_solver_type);
    ode_solver->Init(evo);
+   if (ri >0 && ode_solver->GetState2())
+   {
+      //ode_solver->GetState2()->Set(0,dxp);
+      ode_solver->GetState2()->Append(dxp);
+   }
 
    // 9. Actual time integration
-   real_t t = 0.0;
    bool done = false;
    char dimName[] = "xyz";
 
@@ -302,18 +376,18 @@ int main(int argc, char *argv[])
       cout<<"\n";
    };
 
-   for (int ti = 0; !done; )
+   while (!done)
    {
       real_t dt_real = min(dt, t_final - t);
 
       if (Mpi::Root())
       {
          line(80);
-         cout<<"time step: " << ti << ", time: " << t << endl;
+         cout<<"time step: " << si << ", time: " << t << endl;
          line(80);
       }
       ode_solver->Step(xp, t, dt_real);
-      ti++;
+      si++;
       done = (t >= t_final - 1e-8*dt);
 
       real_t cfl = evo.GetCFL();
@@ -322,7 +396,7 @@ int main(int argc, char *argv[])
       {
          // Print to file
          int nbdr = bdrForce.Height();
-         os << ti<<"\t"<<t<<"\t"<<cfl<<"\t";
+         os << si<<"\t"<<t<<"\t"<<cfl<<"\t";
          for (int b=0; b<nbdr; ++b)
             for (int v=0; v<dim; ++v)
             {
@@ -347,7 +421,7 @@ int main(int argc, char *argv[])
          cout<<" | Boundary | ";
          for (int b=0; b<nbdr; ++b)
          {
-            cout<<std::setw(10)<<b<<" | ";
+            cout<<std::setw(10)<<b+1<<" | ";
          }
          cout<<"\n";
          pline(10+13*nbdr);
@@ -365,22 +439,56 @@ int main(int argc, char *argv[])
          cout<<"\n"<<std::flush;
       }
 
-      if (done || ti % vis_steps == 0)
+      if (done || si % vis_interval== 0)
       {
          if (Mpi::Root())
          {
             line(80);
-            cout << "Visit output: Cycle " << ti << "\t Time: " << t << endl;
+            cout << "Visit output: Cycle " << si << " Time: " << t << endl;
             line(80);
          }
          x_u.Distribute(xp.GetBlock(0));
          x_p.Distribute(xp.GetBlock(1));
 
-         visit_dc.SetCycle(ti);
-         visit_dc.SetTime(t);
-         visit_dc.Save();
+         vdc.SetCycle(vi);
+         vdc.SetTime(t);
+         vdc.Save();
+         vi++;
       }
 
+      if (si % restart_interval == 0)
+      {
+         if (Mpi::Root())
+         {
+            line(80);
+            cout << "Restart output: Cycle " << si << " Time: " << t << endl;
+            line(80);
+         }
+         x_u.Distribute(xp.GetBlock(0));
+         x_p.Distribute(xp.GetBlock(1));
+
+         if(ode_solver->GetState2())
+         {
+            ode_solver->GetState2()->Get(0,dxp);
+            dx_u[0]->Distribute(dxp.GetBlock(0));
+            dx_p[0]->Distribute(dxp.GetBlock(1));
+         }
+
+         rdc.SetCycle(ri);
+         rdc.SetTime(t);
+         rdc.Save();
+         ri++;
+         if (Mpi::Root())
+         {
+            cout<< "-----------------------"<<endl;
+            cout<< " Writing restart files "<<endl;
+            cout<< "-----------------------"<<endl;
+            std::ofstream step("restart/step.dat", std::ifstream::out);
+            step<<t<<"\t"<<si<<"\t"<<ri<<"\t"<<vi<<endl;
+            step<<dt<<endl;
+            step.close();
+         }
+      }
    }
    os.close();
 
