@@ -49,7 +49,6 @@ void GeneralResidualMonitor::MonitorResidual(int it,
    }
 }
 
-
 // Constructor
 SystemResidualMonitor::SystemResidualMonitor(MPI_Comm comm,
                                              const std::string& prefix_,

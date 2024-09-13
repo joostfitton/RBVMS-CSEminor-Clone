@@ -17,7 +17,7 @@ Evolution::Evolution(ParTimeDepBlockNonlinForm &form,
      form(form), solver(solver), dudt(form.Width())
 {
    solver.SetOperator(form);
-   dudt = 0.0; 
+   dudt = 0.0;
 }
 
 // Solve time dependent problem
