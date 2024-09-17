@@ -83,11 +83,11 @@ public:
 
    /// Assemble the element interior residual vectors
    void AssembleElementVector(const Array<const FiniteElement *> &el,
-                               ElementTransformation &Tr,
-                               const Array<const Vector *> &elsol,
-                               const Array<const Vector *> &elrate,
-                               const Array<Vector *> &elvec,
-                               real_t &cfl);
+                              ElementTransformation &Tr,
+                              const Array<const Vector *> &elsol,
+                              const Array<const Vector *> &elrate,
+                              const Array<Vector *> &elvec,
+                              real_t &cfl);
 
    /// Assemble the element interior gradient matrices
    void AssembleElementGrad(const Array<const FiniteElement*> &el,

@@ -670,35 +670,35 @@ void IncNavStoIntegrator
       el1[0]->CalcPhysShape(*Tr.Elem1, sh_u);
       elf_u.MultTranspose(sh_u, u);
 
-    //  real_t un = u*nor;
+      //  real_t un = u*nor;
 
       el1[0]->CalcPhysDShape(*Tr.Elem1, shg_u);
-    //  MultAtB(elf_u, shg_u, grad_u);
-   //   grad_u.Symmetrize();  // Grad to strain
+      //  MultAtB(elf_u, shg_u, grad_u);
+      //   grad_u.Symmetrize();  // Grad to strain
 
       el1[1]->CalcPhysShape(*Tr.Elem1, sh_p);
-    //  real_t p = sh_p*(*elsol[1]);
+      //  real_t p = sh_p*(*elsol[1]);
 
       GetTauB(tau_b, tau_n, mu, u, nor,Tr);
 
-/*
-      // Traction
-      grad_u.Mult(nor, traction);
-      traction *= -2*mu;             // Consistency
-      traction.Add(p, nor);          // Pressure
-      traction.Add(lambda,up);       // Penalty
-      traction.Add(lambda_n*un,nor); // Penalty -- normal
-      AddMult_a_VWt(w, sh_u, traction, elv_u);
+      /*
+            // Traction
+            grad_u.Mult(nor, traction);
+            traction *= -2*mu;             // Consistency
+            traction.Add(p, nor);          // Pressure
+            traction.Add(lambda,up);       // Penalty
+            traction.Add(lambda_n*un,nor); // Penalty -- normal
+            AddMult_a_VWt(w, sh_u, traction, elv_u);
 
-      // Dual consistency
-      MultVWt(nor,up, flux);
-      flux.Symmetrize();
-      AddMult_a_ABt(-w*2*mu, shg_u, flux, elv_u);
+            // Dual consistency
+            MultVWt(nor,up, flux);
+            flux.Symmetrize();
+            AddMult_a_ABt(-w*2*mu, shg_u, flux, elv_u);
 
-      // Continuity
-      elvec[1]->Add(w*un, sh_p);
+            // Continuity
+            elvec[1]->Add(w*un, sh_p);
 
-*/
+      */
 
       // Momentum - Velocity block (w,u)
       for (int i_u = 0; i_u < dof_u; ++i_u)

@@ -96,9 +96,9 @@ int main(int argc, char *argv[])
                   "Minimum time step size.");
    args.AddOption(&dt_max, "-dtmx", "--dt-max",
                   "Maximum time step size.");
-   args.AddOption(&cfl_target , "-cfl", "--cfl-target",
+   args.AddOption(&cfl_target, "-cfl", "--cfl-target",
                   "CFL target .");
-   args.AddOption(&dt_gain , "-dtg", "--dt-gain",
+   args.AddOption(&dt_gain, "-dtg", "--dt-gain",
                   "Gain coefficient for time step adjustment.");
 
    // Solver parameters
@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
    // Check weak boundaries
    if (Mpi::Root() && weak_bdr.Size() > 0 )
    {
-      cout<<"Weak    = ";weak_bdr.Print();
+      cout<<"Weak    = "; weak_bdr.Print();
    }
    for (int b = 0; b < weak_bdr.Size(); b++)
    {
@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
    }
    if (Mpi::Root() && strong_bdr.Size() > 0)
    {
-      cout<<"Strong  = ";strong_bdr.Print();
+      cout<<"Strong  = "; strong_bdr.Print();
    }
 
    // Set boundaries in the weakform
@@ -360,8 +360,8 @@ int main(int argc, char *argv[])
          cout<<"Restarting from step "<<ri-1<<endl;
       }
       // Synchronize
-      MPI_Bcast(&t , 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      MPI_Bcast(&dt , 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&t, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&dt, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
       MPI_Bcast(&si, 1, MPI_INT, 0, MPI_COMM_WORLD);
       MPI_Bcast(&ri, 1, MPI_INT, 0, MPI_COMM_WORLD);
       MPI_Bcast(&vi, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -517,7 +517,7 @@ int main(int argc, char *argv[])
          vi++;
       }
 
-      // Change time step 
+      // Change time step
       real_t dt0 = dt;
       if ((dt_gain > 0))
       {
@@ -573,7 +573,7 @@ int main(int argc, char *argv[])
          }
       }
 
-      if (Mpi::Root()) cout<<endl<<endl;
+      if (Mpi::Root()) { cout<<endl<<endl; }
    }
    os.close();
 
