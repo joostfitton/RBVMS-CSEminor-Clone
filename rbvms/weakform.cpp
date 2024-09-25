@@ -57,7 +57,7 @@ void IncNavStoIntegrator::GetTau(real_t &tau_m, real_t &tau_c, real_t &cfl2,
                                  real_t &mu, Vector &u,
                                  ElementTransformation &T)
 {
-   real_t Cd = 12.0;
+   real_t Cd = 24.0;
    real_t Ct = 1.0;
 
    // Metric tensor
@@ -260,9 +260,9 @@ void IncNavStoIntegrator::AssembleElementVector(
       AddMult_a_VWt(-w, sh_u, f, elv_u);          // Add force + acc term to rhs
 
       // Compute continuity weak residual
-      elvec[1]->Add(w*res_c, sh_p);               // Add Galerkin term
+      elvec[1]->Add(-w*res_c, sh_p);              // Add Galerkin term
       shg_p.Mult(up, sh_p);                       // PSPG help term
-      elvec[1]->Add(-w, sh_p);                    // Add PSPG term
+      elvec[1]->Add(w, sh_p);                     // Add PSPG term
    }
 
    elem_cfl = sqrt(elem_cfl);
@@ -400,9 +400,18 @@ void IncNavStoIntegrator::AssembleElementGrad(
                for (int j_dim = 0; j_dim < dim; ++j_dim)
                {
                   (*elmats(0,0))(i_u + i_dim*dof_u, j_u + j_dim*dof_u)
-                  += (mu + tau_c)*shg_u(i_u,i_dim)*shg_u(j_u,j_dim)*w*dt;
+                  += mu*shg_u(i_u,j_dim)*shg_u(j_u,i_dim)*w*dt;
                }
             }
+            for (int i_dim = 0; i_dim < dim; ++i_dim)
+            {
+               for (int j_dim = 0; j_dim < dim; ++j_dim)
+               {
+                  (*elmats(0,0))(i_u + i_dim*dof_u, j_u + j_dim*dof_u)
+                  += tau_c*shg_u(i_u,i_dim)*shg_u(j_u,j_dim)*w*dt;
+               }
+            }
+
          }
       }
 
@@ -428,15 +437,15 @@ void IncNavStoIntegrator::AssembleElementGrad(
             for (int dim_u = 0; dim_u < dim; ++dim_u)
             {
                (*elmats(1,0))(i_p, j_u + dof_u * dim_u)
-               += sh_p(i_p)*shg_u(j_u,dim_u)*w*dt;
+               -= sh_p(i_p)*shg_u(j_u,dim_u)*w*dt;
                (*elmats(1,0))(i_p, j_u + dof_u * dim_u)
-               -= shg_p(i_p, dim_u)*dupdu(j_u)*w;
+               += shg_p(i_p, dim_u)*dupdu(j_u)*w;
             }
          }
       }
 
       // Continuity - Pressure block (w,p)
-      AddMult_a_AAt(w*tau_m*dt, shg_p, *elmats(1,1));
+      AddMult_a_AAt(-w*tau_m*dt, shg_p, *elmats(1,1));
    }
 
 }
@@ -592,7 +601,7 @@ void IncNavStoIntegrator
 
       el1[0]->CalcPhysDShape(*Tr.Elem1, shg_u);
       MultAtB(elf_u, shg_u, grad_u);
-      grad_u.Symmetrize();  // Grad to strain
+      grad_u.Symmetrize();           // Grad to strain
 
       el1[1]->CalcPhysShape(*Tr.Elem1, sh_p);
       real_t p = sh_p*(*elsol[1]);
@@ -613,7 +622,7 @@ void IncNavStoIntegrator
       AddMult_a_ABt(-w*2*mu, shg_u, flux, elv_u);
 
       // Continuity
-      elvec[1]->Add(-w*un, sh_p);
+      elvec[1]->Add(w*un, sh_p);
    }
 }
 
@@ -706,14 +715,34 @@ void IncNavStoIntegrator
          for (int j_u = 0; j_u < dof_u; ++j_u)
          {
 
-            /*for (int i_dim = 0; i_dim < dim; ++i_dim)
+            for (int i_dim = 0; i_dim < dim; ++i_dim)
             {
+               // Consistency 1
+               for (int j_dim = 0; j_dim < dim; ++j_dim)
+               {
+                  (*elmats(0,0))(i_u + i_dim*dof_u, j_u + i_dim*dof_u)
+                    -= mu*sh_u(i_u)*nor(j_dim)*shg_u(j_u,j_dim)*w*dt;
+               }
+               // Consistency 2
                for (int j_dim = 0; j_dim < dim; ++j_dim)
                {
                   (*elmats(0,0))(i_u + i_dim*dof_u, j_u + j_dim*dof_u)
-                  += mu*shg_u(i_u,i_dim)*shg_u(j_u,j_dim)*w*dt;
+                    -= mu*sh_u(i_u)*nor(j_dim)*shg_u(j_u,i_dim)*w*dt;
                }
-            }*/
+
+               // Dual Consistency 1
+               for (int j_dim = 0; j_dim < dim; ++j_dim)
+               {
+                  (*elmats(0,0))(i_u + i_dim*dof_u, j_u + i_dim*dof_u)
+                    -= mu*shg_u(i_u,j_dim)*nor(j_dim)*sh_u(j_u)*w*dt;
+               }
+               // Dual Consistency 2
+               for (int j_dim = 0; j_dim < dim; ++j_dim)
+               {
+                  (*elmats(0,0))(i_u + i_dim*dof_u, j_u + j_dim*dof_u)
+                    -= mu*shg_u(i_u,i_dim)*nor(j_dim)*sh_u(j_u)*w*dt;
+               }
+            }
 
             // Penalty
             real_t mat = sh_u(i_u)*sh_u(j_u)*tau_b*w*dt;
@@ -746,7 +775,7 @@ void IncNavStoIntegrator
             for (int dim_u = 0; dim_u < dim; ++dim_u)
             {
                (*elmats(1,0))(i_p, j_u + dof_u * dim_u)
-               -= sh_p(i_p)*sh_u(j_u)*nor(dim_u)*w*dt;
+               += sh_p(i_p)*sh_u(j_u)*nor(dim_u)*w*dt;
             }
          }
       }
