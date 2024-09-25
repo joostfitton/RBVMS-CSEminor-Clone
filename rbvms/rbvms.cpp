@@ -351,13 +351,16 @@ int main(int argc, char *argv[])
    if (restart && stat("restart/step.dat", &info) == 0)
    {
       // Read
+
       if (Mpi::Root())
       {
+         real_t dtr;
          std::ifstream in("restart/step.dat", std::ifstream::in);
          in>>t>>si>>ri>>vi;
-         in>>dt;
+         in>>dtr;
          in.close();
          cout<<"Restarting from step "<<ri-1<<endl;
+         if (dt_gain > 0) dt = dtr;
       }
       // Synchronize
       MPI_Bcast(&t, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -430,6 +433,7 @@ int main(int argc, char *argv[])
       if (Mpi::Root())
       {
          line(80);
+         cout<<std::defaultfloat<<std::setprecision(4)<<std::setw(10);
          cout<<" step = " << si << " : dt = " << dt << endl;
          cout<<" time = [" << t << ", " << t+dt <<"]"<< endl;
          line(80);
@@ -447,6 +451,7 @@ int main(int argc, char *argv[])
       {
          // Print to file
          int nbdr = bdrForce.Height();
+         os << std::setw(10);
          os << si<<"\t"<<t<<"\t"<<dt<<"\t"<<cfl<<"\t";
          for (int b=0; b<nbdr; ++b)
             for (int v=0; v<dim; ++v)
