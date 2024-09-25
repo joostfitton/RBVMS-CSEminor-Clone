@@ -1,6 +1,4 @@
 
-**WORK IN PROGRESS**
-
 # RBVMS
 
 Application that can simulate incompressible flow
@@ -16,7 +14,7 @@ Novel features include:
 * * Isogeometric
 * Weak imposition of Dirichlet boundary conditions
 * Conservative boundary forces extraction
-* Symmetry BC???
+* Symmetry BC -- TBD
 
 For details on the formulation see:
 
