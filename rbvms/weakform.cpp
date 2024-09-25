@@ -483,7 +483,7 @@ void IncNavStoIntegrator
 
       CalcOrtho(Tr.Jacobian(), nor);
 
-      real_t w = ip.weight * 0.5;//* Tr.Weight();
+      real_t w = ip.weight * Tr.Weight();// instead???* 0.5;//
 
       el1[0]->CalcPhysShape(*Tr.Elem1, sh_u);
       elf_u.MultTranspose(sh_u, u);
@@ -525,8 +525,8 @@ void IncNavStoIntegrator
 
       CalcOrtho(Tr.Jacobian(), nor);
 
-      //real_t w = ip.weight * Tr.Weight(); //
-      real_t w = ip.weight * 0.5;// instead???
+      real_t w = ip.weight * Tr.Weight(); //
+      //real_t w = ip.weight * 0.5;// instead???
 
       el1[0]->CalcPhysShape(*Tr.Elem1, sh_u);
       elf_u.MultTranspose(sh_u, u);
