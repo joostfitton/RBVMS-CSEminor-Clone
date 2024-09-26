@@ -47,7 +47,10 @@ or
 git clone https://github.com/IdoAkkerman/rbvms.git
 
 ```
-
+or
+```
+git clone https://github.com/IdoAkkerman/rbvms.git
+```
 This will create a directory `rbvms` with the code in it. This code can be compiled using the following commands:
 
 ```
