@@ -68,16 +68,33 @@ Depending on the machine compilation might take a few minutes.
 After this hypre and MFEM will be installed in the `build/external` directory, and
 the rbvms executable can be found in the `bin` directory.
 
+## Cases
+
+2D
+1. Lid driven cavity: tbd
+2. Von Karman vortex street: see cases/von-karman-re100
+3. Naca foil: tbd
+
+3D tbd
+1. Von Karman vortex street
+2. Naca foil
+3. Gresho vortex
+4. Taylor-green vortex
+5. Turbulent channel
+6. Taylor Couette flow
 
 ## Run
-
+The code can be run by running
 ```
-XXX/bin/rbvms
+$BUILD/bin/rbvms
+```
+
+To see all the command line options run:
+```
+$BUILD/bin/rbvms -h
 ```
 
 ### Isogeometric
-
-
 
 
 ### GMSH
@@ -89,9 +106,14 @@ using the following command:
 sudo apt-get install gmsh
 ```
 
+### Visualization using Visit
+
+The results can be visualized using [Visit] https://visit-dav.github.io/visit-website/index.html.
+Which is an open-source tool that can natively visualize NURBS based solutions.
+
 # Licenses
 
-**RBVM** is distributed under the terms of the Apache License (Version 2.0). 
+**RBVM** is distributed under the terms of the Apache License (Version 2.0).
 
 All new contributions must be made under the Apache-2.0 licenses.
 
