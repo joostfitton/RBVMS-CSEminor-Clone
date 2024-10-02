@@ -1,9 +1,9 @@
 //--------------------------------------------------------------
-// Solution function for the lid driven cavity
+// Solution function for the flow around a naca foil
 //
 // To compile run, for example:
-// mpicc -shared -o libfun.so -fPIC lid-driven-cavity.c
-// gcc   -shared -o libfun.so -fPIC lid-driven-cavity.c
+// mpicc -shared -o libfun.so -fPIC naca-foil.c
+// gcc   -shared -o libfun.so -fPIC naca-foil.c
 //--------------------------------------------------------------
 
 #include <math.h>
@@ -11,22 +11,16 @@
 
 void sol_u(double *coord, int dim, double time, double *u, int vdim)
 {
-   double x = coord[0];
+   double x = coord[0] - 0.5;
    double y = coord[1];
    const double eps = 1e-6;
 
-   u[0] = pow(4.0*x*(1.0-x),0.01)*y*y*y;
-   u[1] = 0.0;
+   double r = sqrt(x*x + 10*y*y);
+   double r0 = 0.65;
 
-   if (y     < eps) u[0] = 0.0;
-   if (x     < eps) u[0] = 0.0;
-   if (1.0-x < eps) u[0] = 0.0;
-   if (1.0-y < eps)
-   {
-      u[0] = 1.0;
-      if (x     < eps) u[0] = 0.5;
-      if (1.0-x < eps) u[0] = 0.5;
-   }
+   // Base flow + BC
+   u[0] = fmin(1.0, 5*fmax(r - r0, 0.0));
+   u[1] = 0.0;
 }
 
 void force(double *coord, int dim, double time, double *force, int vdim)
