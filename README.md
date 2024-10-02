@@ -30,13 +30,21 @@ lightweight, general, scalable C++ library for finite element methods.
 ## Install
 
 To install RBVMS on a Ubuntu-based machine make sure the appropriate packages are installed.
-This can be done using the following command:
+
+Before installing the packages make sure the machine is updated, by running the folliwing commands in a terminal:
+
+```
+sudo apt-get update
+sudo apt-get upgrade
+```
+
+Install the required packages by running the following command in a terminal:
 
 ```
 sudo apt-get install cmake git build-essential openmpi-common libopenmpi-dev libmetis5 libmetis-dev
 ```
 
-The RBVMS code can be downloaded using the following command
+The RBVMS code can be downloaded using the following command:
 
 ```
 git clone git@github.com:IdoAkkerman/rbvms.git
@@ -46,10 +54,6 @@ or
 ```
 git clone https://github.com/IdoAkkerman/rbvms.git
 
-```
-or
-```
-git clone https://github.com/IdoAkkerman/rbvms.git
 ```
 This will create a directory `rbvms` with the code in it. This code can be compiled using the following commands:
 
@@ -88,6 +92,8 @@ The code can be run by running
 ```
 $BUILD/bin/rbvms
 ```
+
+Where `$BUILD` is the directory where `cmake` was run.
 
 To see all the command line options run:
 ```

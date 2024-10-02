@@ -26,16 +26,30 @@ The boundaries of the mesh are numbered as follows:
 3. Cylinder
 4. Outflow
 
-A NURBS simulation can be started by typing:
+The required functions defining the initial and boundary conditions, the forcing-term and
+the diffusion are specified in `von-karman.c`. This file needs to be compiled, by running
+```
+gcc   -shared -o libvkvs.so -fPIC von-karman.c
+```
+in the `cases/von-karman-re100` directory.
+Each time changes are made to the `.c` file this command needs to be run again.
+
+A NURBS simulation can be started by running
 ```
 bash run-nurbs
 ```
+in the `cases/von-karman-re100` directory.
+This script will compile `von-karman.c` for you.
+The script assumes the `rbvms` executable islocated in `../../build/rbvms/rbvms`.
+If this is incorrect the script can be modified.
+It is not necessary to run `rbvms` via the script, the script is mainly a convenient way of communicating
+what commands could/shoudl be run and what the command line options are.
+
 The file run-nurbs documents the input parameters needed for the simulation.
 The script assumes the simulation can run on 16 cores.
 The simulation takes on the order of 1 hour to finish if 16 cores are indeed available.
 
 The simulation generates 4 types of output.
-
 
 Furthermore the forces 
 1. A log file. This includes all solver information such as iteration counts and residuals.
@@ -57,7 +71,7 @@ The time trace of the Lift and Drag coefficients can also be plotted using a gnu
 ```
 gnuplot ClCd.gp
 ```
-this routine should also work remotely if the ssh connection is established with a x-forwarding, 
+this routine should also work remotely if the ssh connection is established with a x-forwarding,
 ```
 ssh -Y user@machine
 ```
