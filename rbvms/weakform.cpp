@@ -459,8 +459,9 @@ void IncNavStoIntegrator::AssembleElementGrad(
    auto AEGendtime = std::chrono::high_resolution_clock::now();
    auto Forloopduration = std::chrono::duration_cast<std::chrono::microseconds>(Forloopendtime - Forloopstarttime).count();
    auto AEGduration = std::chrono::duration_cast<std::chrono::microseconds>(AEGendtime - AEGstarttime).count();
-   std::cout << "Elapsed time: " << Forloopduration << " microseconds" << std::endl;
-   std::cout << "Elapsed time: " << AEGduration << " microseconds" << std::endl;
+   std::cout << "For-loop Elapsed time: " << Forloopduration << " microseconds" << std::endl;
+   std::cout << "AEG Elapsed time: " << AEGduration << " microseconds" << std::endl;
+   std::cout << "--------------------- Next AEG call ---------------------" << std::endl;
 }
 
 
