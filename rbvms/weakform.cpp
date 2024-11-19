@@ -310,6 +310,9 @@ void IncNavStoIntegrator::AssembleElementGrad(
    real_t tau_m, tau_c, cfl2;
 
    
+   
+   auto ForloopNestedloopsendtime, ForloopNestedloopsstarttime, ForloopIntroductionendtime, ForloopIntroductionstarttime
+   auto Continuityendtime, Continuitystarttime, Pressureendtime, Pressurestarttime
    auto Forloopstarttime = std::chrono::high_resolution_clock::now();
 
    for (int i = 0; i < ir.GetNPoints(); ++i)
@@ -470,19 +473,20 @@ void IncNavStoIntegrator::AssembleElementGrad(
    auto Forloopendtime = std::chrono::high_resolution_clock::now();
    auto AEGendtime = std::chrono::high_resolution_clock::now();
 
-   auto ForloopIntroductionDuration = std::chrono::duration_cast<std::chrono::microseconds>(ForloopNestedloopsendtime-ForloopNestedloopsstarttime).count();
-   auto NestedForloopsDuration = std::chrono::duration_cast<std::chrono::microseconds>(ForloopIntroductionendtime-ForloopIntroductionstarttime).count();
+   auto ForloopIntroductionDuration = std::chrono::duration_cast<std::chrono::microseconds>(ForloopNestedloopsendtime - ForloopNestedloopsstarttime).count();
+   auto NestedForloopsDuration = std::chrono::duration_cast<std::chrono::microseconds>(ForloopIntroductionendtime - ForloopIntroductionstarttime).count();
    auto ContinuityDuration = std::chrono::duration_cast<std::chrono::microseconds>(Continuityendtime - Continuitystarttime).count();
    auto PressureDuration = std::chrono::duration_cast<std::chrono::microseconds>(Pressureendtime - Pressurestarttime).count();
    auto ForloopDuration = std::chrono::duration_cast<std::chrono::microseconds>(Forloopendtime - Forloopstarttime).count();
    auto AEGDuration = std::chrono::duration_cast<std::chrono::microseconds>(AEGendtime - AEGstarttime).count();
 
    std::cout << "-------------------- AEG call profile -------------------" << std::endl;
-   std::cout << "For-loop Elapsed time: " << ForloopIntroductionDuration << " microseconds" << std::endl;
-   std::cout << "For-loop Elapsed time: " << NestedForloopsDuration << " microseconds" << std::endl;
+   std::cout << "For-loop Introduction Elapsed time: " << ForloopIntroductionDuration << " microseconds" << std::endl;
+   std::cout << "Nested For-loops Elapsed time: " << NestedForloopsDuration << " microseconds" << std::endl;
+   std::cout << "Continuity Block Elapsed time: " << ContinuityDuration << " microseconds" << std::endl;   
+   std::cout << "Pressure Block Elapsed time: " << PressureDuration << " microseconds" << std::endl;
    std::cout << "For-loop Elapsed time: " << ForloopDuration << " microseconds" << std::endl;
    std::cout << "AEG Elapsed time: " << AEGDuration << " microseconds" << std::endl;
-   std::cout << "Continuity Elapsed time: " << ContinuityDuration << " microseconds" << std::endl;
    std::cout << "--------------------- Next AEG call ---------------------\n" << std::endl;
 }
 
