@@ -278,7 +278,7 @@ void IncNavStoIntegrator::AssembleElementGrad(
    const Array2D<DenseMatrix *> &elmats)
 {
    // Start Measuring Time
-   auto AEGstartime = std::chrono::high_resolution_clock::now();
+   auto AEGstarttime = std::chrono::high_resolution_clock::now();
 
    int dof_u = el[0]->GetDof();
    int dof_p = el[1]->GetDof();
@@ -310,7 +310,7 @@ void IncNavStoIntegrator::AssembleElementGrad(
    real_t tau_m, tau_c, cfl2;
 
    
-   auto Forloopstartime = std::chrono::high_resolution_clock::now();
+   auto Forloopstarttime = std::chrono::high_resolution_clock::now();
 
    for (int i = 0; i < ir.GetNPoints(); ++i)
    {
