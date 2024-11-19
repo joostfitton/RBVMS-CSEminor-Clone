@@ -314,6 +314,7 @@ void IncNavStoIntegrator::AssembleElementGrad(
 
    for (int i = 0; i < ir.GetNPoints(); ++i)
    {
+      auto ForloopIntroductionstarttime = std::chrono::high_resolution_clock::now();
       const IntegrationPoint &ip = ir.IntPoint(i);
       Tr.SetIntPoint(&ip);
       real_t w = ip.weight * Tr.Weight();
@@ -377,6 +378,10 @@ void IncNavStoIntegrator::AssembleElementGrad(
       // Recompute convective gradient
       MultAtB(elf_u, shg_u, grad_u);
 
+      auto ForloopIntroductionendtime = std::chrono::high_resolution_clock::now();
+
+
+      auto ForloopNestedloopsstarttime = std::chrono::high_resolution_clock::now();
       // Momentum - Velocity block (w,u)
       for (int i_u = 0; i_u < dof_u; ++i_u)
       {
@@ -422,7 +427,9 @@ void IncNavStoIntegrator::AssembleElementGrad(
 
          }
       }
+      auto ForloopNestedloopsendtime = std::chrono::high_resolution_clock::now();
 
+      auto Momentumstarttime = std::chrono::high_resolution_clock::now();
       // Momentum - Pressure block (w,p)
       for (int i_p = 0; i_p < dof_p; ++i_p)
       {
@@ -436,7 +443,9 @@ void IncNavStoIntegrator::AssembleElementGrad(
             }
          }
       }
+      auto Momentumendtime = std::chrono::high_resolution_clock::now();
 
+      auto Continuitystarttime = std::chrono::high_resolution_clock::now();
       // Continuity - Velocity block (q,u)
       for (int i_p = 0; i_p < dof_p; ++i_p)
       {
@@ -451,17 +460,30 @@ void IncNavStoIntegrator::AssembleElementGrad(
             }
          }
       }
+      auto Continuityendtime = std::chrono::high_resolution_clock::now();
 
+      auto Pressurestarttime = std::chrono::high_resolution_clock::now();
       // Continuity - Pressure block (w,p)
       AddMult_a_AAt(-w*tau_m*dt, shg_p, *elmats(1,1));
+      auto Pressureendtime = std::chrono::high_resolution_clock::now();
    }
    auto Forloopendtime = std::chrono::high_resolution_clock::now();
    auto AEGendtime = std::chrono::high_resolution_clock::now();
-   auto Forloopduration = std::chrono::duration_cast<std::chrono::microseconds>(Forloopendtime - Forloopstarttime).count();
-   auto AEGduration = std::chrono::duration_cast<std::chrono::microseconds>(AEGendtime - AEGstarttime).count();
-   std::cout << "For-loop Elapsed time: " << Forloopduration << " microseconds" << std::endl;
-   std::cout << "AEG Elapsed time: " << AEGduration << " microseconds" << std::endl;
-   std::cout << "--------------------- Next AEG call ---------------------" << std::endl;
+
+   auto ForloopIntroductionDuration = std::chrono::duration_cast<std::chrono::microseconds>(ForloopNestedloopsendtime-ForloopNestedloopsstarttime).count();
+   auto NestedForloopsDuration = std::chrono::duration_cast<std::chrono::microseconds>(ForloopIntroductionendtime-ForloopIntroductionstarttime).count();
+   auto ContinuityDuration = std::chrono::duration_cast<std::chrono::microseconds>(Continuityendtime - Continuitystarttime).count();
+   auto PressureDuration = std::chrono::duration_cast<std::chrono::microseconds>(Pressureendtime - Pressurestarttime).count();
+   auto ForloopDuration = std::chrono::duration_cast<std::chrono::microseconds>(Forloopendtime - Forloopstarttime).count();
+   auto AEGDuration = std::chrono::duration_cast<std::chrono::microseconds>(AEGendtime - AEGstarttime).count();
+
+   std::cout << "-------------------- AEG call profile -------------------" << std::endl;
+   std::cout << "For-loop Elapsed time: " << ForloopIntroductionDuration << " microseconds" << std::endl;
+   std::cout << "For-loop Elapsed time: " << NestedForloopsDuration << " microseconds" << std::endl;
+   std::cout << "For-loop Elapsed time: " << ForloopDuration << " microseconds" << std::endl;
+   std::cout << "AEG Elapsed time: " << AEGDuration << " microseconds" << std::endl;
+   std::cout << "Continuity Elapsed time: " << ContinuityDuration << " microseconds" << std::endl;
+   std::cout << "--------------------- Next AEG call ---------------------\n" << std::endl;
 }
 
 
