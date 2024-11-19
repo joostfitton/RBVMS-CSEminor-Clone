@@ -311,8 +311,14 @@ void IncNavStoIntegrator::AssembleElementGrad(
 
    
    
-   auto ForloopNestedloopsendtime, ForloopNestedloopsstarttime, ForloopIntroductionendtime, ForloopIntroductionstarttime
-   auto Continuityendtime, Continuitystarttime, Pressureendtime, Pressurestarttime
+   auto ForloopNestedloopsendtime = 0;
+   auto ForloopNestedloopsstarttime = 0;
+   auto ForloopIntroductionendtime = 0;
+   auto ForloopIntroductionstarttime = 0;
+   auto Continuityendtime = 0;
+   auto Continuitystarttime = 0;
+   auto Pressureendtime = 0;
+   auto Pressurestarttime = 0;
    auto Forloopstarttime = std::chrono::high_resolution_clock::now();
 
    for (int i = 0; i < ir.GetNPoints(); ++i)
