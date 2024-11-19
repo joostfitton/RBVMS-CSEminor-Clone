@@ -37,7 +37,7 @@ IncNavStoIntegrator::IncNavStoIntegrator(Coefficient &mu,
       hmap(0,1) =  hmap(1,0) =  1;
       hmap(1,1) = 2;
    }
-   else if (dim == 2)
+   else if (dim == 3)
    {
       hmap(0,0) = 0;
       hmap(0,1) = hmap(1,0) = 1;
@@ -276,6 +276,9 @@ void IncNavStoIntegrator::AssembleElementGrad(
    const Array<const Vector *> &elrate,
    const Array2D<DenseMatrix *> &elmats)
 {
+   // Start Measuring Time
+   auto AEGstartime = std::chrono::high_resolution_clock::now();
+
    int dof_u = el[0]->GetDof();
    int dof_p = el[1]->GetDof();
 
@@ -304,6 +307,10 @@ void IncNavStoIntegrator::AssembleElementGrad(
    int intorder = 2*el[0]->GetOrder();
    const IntegrationRule &ir = IntRules.Get(el[0]->GetGeomType(), intorder);
    real_t tau_m, tau_c, cfl2;
+
+   
+   auto Forloopstartime = std::chrono::high_resolution_clock::now();
+
    for (int i = 0; i < ir.GetNPoints(); ++i)
    {
       const IntegrationPoint &ip = ir.IntPoint(i);
@@ -447,7 +454,12 @@ void IncNavStoIntegrator::AssembleElementGrad(
       // Continuity - Pressure block (w,p)
       AddMult_a_AAt(-w*tau_m*dt, shg_p, *elmats(1,1));
    }
-
+   auto Forloopendtime = std::chrono::high_resolution_clock::now();
+   auto AEGendtime = std::chrono::high_resolution_clock::now();
+   auto Forloopduration = std::chrono::duration_cast<std::chrono::microseconds>(Forloopendtime - Forloopstarttime).count();
+   auto AEGduration = std::chrono::duration_cast<std::chrono::microseconds>(AEGendtime - AEGstarttime).count();
+   std::cout << "Elapsed time: " << Forloopduration << " microseconds" << std::endl;
+   std::cout << "Elapsed time: " << AEGduration << " microseconds" << std::endl;
 }
 
 
