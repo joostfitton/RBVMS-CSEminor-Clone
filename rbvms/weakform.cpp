@@ -384,6 +384,11 @@ void IncNavStoIntegrator::AssembleElementGrad(
       auto TimeEnd2 = std::chrono::high_resolution_clock::now();
       auto ForloopIntroductionTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd2 - TimeStart2).count();
 
+      std::any MomentumVelocityBlockTime = 0;
+      std::any MomentumPressureBlockTime = 0;
+      std::any ContinuityVelocityBlockTime = 0;
+      std::any ContinuityPressureBlockTime = 0;
+
       auto TimeStart3 = std::chrono::high_resolution_clock::now();
       // Momentum - Velocity block (w,u)
       for (int i_u = 0; i_u < dof_u; ++i_u)
@@ -484,7 +489,6 @@ void IncNavStoIntegrator::AssembleElementGrad(
    std::cout << "Continuity Pressure Elapsed time: " << ContinuityPressureBlockTime << " microseconds" << std::endl;
    std::cout << "--------------------- Next AEG call ---------------------\n" << std::endl;
 }
-
 
 // Assemble the outflow boundary residual vectors
 void IncNavStoIntegrator
