@@ -312,6 +312,11 @@ void IncNavStoIntegrator::AssembleElementGrad(
    // Timing
    auto TimeEnd1 = std::chrono::high_resolution_clock::now();
    auto IntroductionTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd1 - TimeStart1).count();
+   
+   double MomentumVelocityBlockTime = 0;
+   double MomentumPressureBlockTime = 0;
+   double ContinuityVelocityBlockTime = 0;
+   double ContinuityPressureBlockTime = 0;
 
    for (int i = 0; i < ir.GetNPoints(); ++i)
    {
@@ -383,11 +388,6 @@ void IncNavStoIntegrator::AssembleElementGrad(
 
       auto TimeEnd2 = std::chrono::high_resolution_clock::now();
       auto ForloopIntroductionTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd2 - TimeStart2).count();
-
-      double MomentumVelocityBlockTime = 0;
-      double MomentumPressureBlockTime = 0;
-      double ContinuityVelocityBlockTime = 0;
-      double ContinuityPressureBlockTime = 0;
 
       auto TimeStart3 = std::chrono::high_resolution_clock::now();
       // Momentum - Velocity block (w,u)
