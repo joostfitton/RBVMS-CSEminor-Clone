@@ -312,7 +312,8 @@ void IncNavStoIntegrator::AssembleElementGrad(
    // Timing
    auto TimeEnd1 = std::chrono::high_resolution_clock::now();
    auto IntroductionTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd1 - TimeStart1).count();
-   
+
+   double ForloopIntroductionTime = 0;
    double MomentumVelocityBlockTime = 0;
    double MomentumPressureBlockTime = 0;
    double ContinuityVelocityBlockTime = 0;
