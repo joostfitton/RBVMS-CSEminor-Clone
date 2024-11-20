@@ -436,7 +436,7 @@ void IncNavStoIntegrator::AssembleElementGrad(
          }
       }
       auto TimeEnd3 = std::chrono::high_resolution_clock::now();
-      auto MomentumVelocityBlockTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd3 - TimeStart3).count();
+      MomentumVelocityBlockTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd3 - TimeStart3).count();
 
       auto TimeStart4 = std::chrono::high_resolution_clock::now();
       // Momentum - Pressure block (w,p)
@@ -453,7 +453,7 @@ void IncNavStoIntegrator::AssembleElementGrad(
          }
       }
       auto TimeEnd4 = std::chrono::high_resolution_clock::now();
-      auto MomentumPressureBlockTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd4 - TimeStart4).count();
+      MomentumPressureBlockTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd4 - TimeStart4).count();
 
       auto TimeStart5 = std::chrono::high_resolution_clock::now();
       // Continuity - Velocity block (q,u)
@@ -471,13 +471,13 @@ void IncNavStoIntegrator::AssembleElementGrad(
          }
       }
       auto TimeEnd5 = std::chrono::high_resolution_clock::now();
-      auto ContinuityVelocityBlockTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd5 - TimeStart5).count();
+      ContinuityVelocityBlockTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd5 - TimeStart5).count();
 
       auto TimeStart6 = std::chrono::high_resolution_clock::now();
       // Continuity - Pressure block (w,p)
       AddMult_a_AAt(-w*tau_m*dt, shg_p, *elmats(1,1));
       auto TimeEnd6 = std::chrono::high_resolution_clock::now();
-      auto ContinuityPressureBlockTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd4 - TimeStart4).count();
+      ContinuityPressureBlockTime = std::chrono::duration_cast<std::chrono::microseconds>(TimeEnd4 - TimeStart4).count();
    }
 
    std::cout << "---------------------- AEG  Profile -------------------" << std::endl;
