@@ -215,31 +215,32 @@ int main(int argc, char *argv[])
    // 5. Define the time stepping algorithm
 
    // Set up the preconditioner
-   RBVMS::JacobianPreconditioner jac_prec(bOffsets);
+RBVMS::ExtendedPreconditioner ext_prec(bOffsets);
 
-   // Set up the Jacobian solver
-   RBVMS::GeneralResidualMonitor j_monitor(MPI_COMM_WORLD,"\t\tFGMRES", 25);
-   FGMRESSolver j_gmres(MPI_COMM_WORLD);
-   j_gmres.iterative_mode = false;
-   j_gmres.SetRelTol(GMRES_RelTol);
-   j_gmres.SetAbsTol(1e-12);
-   j_gmres.SetMaxIter(GMRES_MaxIter);
-   j_gmres.SetPrintLevel(-1);
-   j_gmres.SetMonitor(j_monitor);
-   j_gmres.SetPreconditioner(jac_prec);
+// Set up the BiCGSTAB solver
+RBVMS::GeneralResidualMonitor bicg_monitor(MPI_COMM_WORLD, "\t\tBiCGSTAB", 25);
+BiCGSTABSolver bicg_solver(MPI_COMM_WORLD);
+bicg_solver.iterative_mode = false;
+bicg_solver.SetRelTol(GMRES_RelTol);  // Same tolerance, rename to Linear_RelTol if required
+bicg_solver.SetAbsTol(1e-12);
+bicg_solver.SetMaxIter(GMRES_MaxIter); // Adjust the max iterations
+bicg_solver.SetPrintLevel(-1);
+bicg_solver.SetMonitor(bicg_monitor);
+bicg_solver.SetPreconditioner(ext_prec);  // Use the extended preconditioner here
 
-   // Set up the Newton solver
-   RBVMS::SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,
-                                               "Newton", 1,
-                                               bOffsets);
-   NewtonSolver newton_solver(MPI_COMM_WORLD);
-   newton_solver.iterative_mode = true;
-   newton_solver.SetPrintLevel(-1);
-   newton_solver.SetMonitor(newton_monitor);
-   newton_solver.SetRelTol(Newton_RelTol);
-   newton_solver.SetAbsTol(1e-12);
-   newton_solver.SetMaxIter(Newton_MaxIter );
-   newton_solver.SetSolver(j_gmres);
+// Set up the Newton solver
+RBVMS::SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,
+                                            "Newton", 1,
+                                            bOffsets);
+NewtonSolver newton_solver(MPI_COMM_WORLD);
+newton_solver.iterative_mode = true;
+newton_solver.SetPrintLevel(-1);
+newton_solver.SetMonitor(newton_monitor);
+newton_solver.SetRelTol(Newton_RelTol);
+newton_solver.SetAbsTol(1e-12);
+newton_solver.SetMaxIter(Newton_MaxIter);
+newton_solver.SetSolver(bicg_solver);  // Use the BiCGSTAB solver here
+
 
    // Define the physical parameters
    LibVectorCoefficient sol(dim, lib_file, "sol_u");
