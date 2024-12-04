@@ -11,37 +11,36 @@ using namespace mfem;
 using namespace RBVMS;
 
 // Set the diagonal and off-diagonal operators
-void ExtendedPreconditioner::SetOperator(const Operator &op)
+void JacobianPreconditioner::SetOperator(const Operator &op)
 {
    BlockOperator *jacobian = (BlockOperator *) &op;
 
+   if (prec[0] == nullptr)
+   {
+      prec[0] = new HypreILU();//*Jpp);new HypreSmoother();//HypreILU()
+   }
+   if (prec[1] == nullptr)
+   {
+      HypreParMatrix* Jpp = dynamic_cast<HypreParMatrix*>(&jacobian->GetBlock(1,1));
+      HypreParMatrix *Jpp2 = const_cast<HypreParMatrix*>(Jpp);
+    //  prec[1] = new HypreSmoother();//*Jpp);
+      prec[1] = new HypreILU();//*Jpp);
+   }
+
    for (int i = 0; i < prec.Size(); ++i)
    {
-      if (!prec[i])
-      {
-         // Choose preconditioner type for each block
-         if (i == 0)
-         {
-            prec[i] = new HypreAMG(); // Use AMG for the first block
-         }
-         else
-         {
-            prec[i] = new HypreILU(); // Use ILU for other blocks
-         }
-      }
-
-      prec[i]->SetOperator(jacobian->GetBlock(i, i));
+      prec[i]->SetOperator(jacobian->GetBlock(i,i));
       SetDiagonalBlock(i, prec[i]);
 
-      for (int j = i + 1; j < prec.Size(); ++j)
+      for (int j = i+1; j < prec.Size(); ++j)
       {
-         SetBlock(j, i, const_cast<Operator *>(&jacobian->GetBlock(j, i)));
+         SetBlock(j,i, const_cast<Operator*>(&jacobian->GetBlock(j,i)));
       }
    }
 }
 
 // Destructor
-ExtendedPreconditioner::~ExtendedPreconditioner()
+JacobianPreconditioner::~JacobianPreconditioner()
 {
    for (int i = 0; i < prec.Size(); ++i)
    {
