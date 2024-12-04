@@ -16,24 +16,26 @@ using namespace mfem;
 namespace RBVMS
 {
 
-// Custom block preconditioner for the Jacobian
-class JacobianPreconditioner : public
+// Custom block preconditioner with extended options
+class ExtendedPreconditioner : public
    BlockLowerTriangularPreconditioner
 {
 protected:
-   Array<Solver *> prec;
+   Array<Solver *> prec; // Array to hold preconditioners for each block
 
 public:
    /// Constructor
-   JacobianPreconditioner(Array<int> &offsets)
-      : BlockLowerTriangularPreconditioner (offsets), prec(offsets.Size()-1)
-   { prec = nullptr;};
+   ExtendedPreconditioner(Array<int> &offsets)
+      : BlockLowerTriangularPreconditioner(offsets), prec(offsets.Size() - 1)
+   {
+      prec = nullptr;
+   };
 
    /// Set the diagonal and off-diagonal operators
    virtual void SetOperator(const Operator &op);
 
-   // Destructor
-   virtual ~JacobianPreconditioner();
+   /// Destructor
+   virtual ~ExtendedPreconditioner();
 };
 
 } // namespace RBVMS
