@@ -214,19 +214,26 @@ int main(int argc, char *argv[])
 
    // 5. Define the time stepping algorithm
 
-   // Set up the preconditioner
-   RBVMS::JacobianPreconditioner jac_prec(bOffsets);
+  // Set up the preconditioner
+RBVMS::JacobianPreconditioner jac_prec(bOffsets);
 
-   // Set up the Jacobian solver
-   RBVMS::GeneralResidualMonitor j_monitor(MPI_COMM_WORLD,"\t\tFGMRES", 25);
-   FGMRESSolver j_gmres(MPI_COMM_WORLD);
-   j_gmres.iterative_mode = false;
-   j_gmres.SetRelTol(GMRES_RelTol);
-   j_gmres.SetAbsTol(1e-12);
-   j_gmres.SetMaxIter(GMRES_MaxIter);
-   j_gmres.SetPrintLevel(-1);
-   j_gmres.SetMonitor(j_monitor);
-   j_gmres.SetPreconditioner(jac_prec);
+// Customize the preconditioner blocks
+jac_prec.prec[0] = new HypreBoomerAMG(); // Use AMG for the first block
+for (int i = 1; i < jac_prec.prec.Size(); ++i)
+{
+    jac_prec.prec[i] = new HypreILU(); // Use ILU for the remaining blocks
+}
+
+// Set up the Jacobian solver
+RBVMS::GeneralResidualMonitor j_monitor(MPI_COMM_WORLD, "\t\tFGMRES", 25);
+FGMRESSolver j_gmres(MPI_COMM_WORLD);
+j_gmres.iterative_mode = false;
+j_gmres.SetRelTol(GMRES_RelTol);
+j_gmres.SetAbsTol(1e-12);
+j_gmres.SetMaxIter(GMRES_MaxIter);
+j_gmres.SetPrintLevel(-1);
+j_gmres.SetMonitor(j_monitor);
+j_gmres.SetPreconditioner(jac_prec);
 
    // Set up the Newton solver
    RBVMS::SystemResidualMonitor newton_monitor(MPI_COMM_WORLD,
