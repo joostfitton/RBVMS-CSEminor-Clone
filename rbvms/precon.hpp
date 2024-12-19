@@ -21,19 +21,21 @@ class JacobianPreconditioner : public
    BlockLowerTriangularPreconditioner
 {
 protected:
-   Array<Solver *> prec;
+   Array<Solver *> prec; // Preconditioners for each block
 
 public:
    /// Constructor
    JacobianPreconditioner(Array<int> &offsets)
-      : BlockLowerTriangularPreconditioner (offsets), prec(offsets.Size()-1)
-   { prec = nullptr;};
+      : BlockLowerTriangularPreconditioner(offsets), prec(offsets.Size() - 1)
+   { 
+      prec = nullptr; 
+   }
 
    /// Set the diagonal and off-diagonal operators
-   virtual void SetOperator(const Operator &op);
+   virtual void SetOperator(const Operator &op) override;
 
    // Destructor
-   virtual ~JacobianPreconditioner();
+   virtual ~JacobianPreconditioner() override;
 };
 
 } // namespace RBVMS
